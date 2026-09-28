@@ -10,7 +10,8 @@
 // rarely used, recent, and short. Clues that give the answer away, lean on
 // other entries or on a fill-in blank, or are abbreviations are left out.
 // Answers are kept only if every pair of neighbouring letters in them appears
-// in some 5-letter word, so every letter can be reached by a vine.
+// in some word Wordle accepts, so every letter can be reached by a vine
+// (build.mjs then keeps only answers two guesses can finish).
 
 import fs from 'fs';
 import path from 'path';
@@ -20,7 +21,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = process.argv[2];
 if (!dir) throw new Error('Pass the pastclues folder');
 
-const five = fs.readFileSync(path.join(here, '.cache', 'enable.txt'), 'utf8').split(/\r?\n/).filter(w => w.length === 5);
+const five = fs.readFileSync(path.join(here, '.cache', 'wordle.txt'), 'utf8').split(/\r?\n/).filter(w => w.length === 5);
 const reachable = new Set(five.flatMap(w => [0, 1, 2, 3].map(i => w[i] + w[i + 1])));
 const targets = fs.readFileSync(path.join(here, 'targets.txt'), 'utf8').split(/\r?\n/).filter(Boolean);
 

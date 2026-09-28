@@ -35,12 +35,12 @@
     const list = data.puzzles;
     const day = dayIndex();
     const idx = practice ?? ((day % list.length) + list.length) % list.length;
-    const [clue, hidden] = list[idx];
+    const [clue, hidden, par, solution] = list[idx];
     const answer = reveal(hidden);
     const saved = practice === null ? store.get(dailyKey(day), null) : null;
     const ok = saved && saved.answer === hidden;
     game = {
-      clue, answer, hidden, day,
+      clue, answer, hidden, day, par, solution: reveal(solution).split(' '),
       guesses: ok ? saved.guesses : [],
       status: ok ? saved.status : 'playing',
       counted: ok ? !!saved.counted : false,
@@ -306,7 +306,8 @@
       for (const p of [i, i + 1]) if (before.get(p) !== 'vine' && !arrivals.has(p)) arrivals.set(p, t);
     });
 
-    if (fill.size === game.answer.length) game.status = 'won';
+    // Yellow letters sit in the answer as hints; a blank only counts once a vine turns it green.
+    if ([...game.answer].every((_, i) => fill.get(i) === 'vine')) game.status = 'won';
     else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
 
     const newLetters = [...fill.keys()].filter(i => !before.has(i)).length;
@@ -361,13 +362,14 @@
     const s = store.get(STATS_KEY, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
     const over = game.status !== 'playing';
     const clue = `<p class="result-clue">${escapeHTML(game.clue)}</p>`;
+    const best = `<p class="result-par">Fewest possible: ${game.par} guess${game.par > 1 ? 'es' : ''}, e.g. ${game.solution.map(w => w.toUpperCase()).join(' + ')}</p>`;
     let result = '';
     if (game.status === 'won') {
       const n = game.guesses.length;
       const words = ['Perfect bloom', 'Magnificent', 'In full bloom', 'Flourishing', 'Growing nicely', 'Just in time'];
-      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.answer}</div>${clue}<p>Grown in ${n} of ${MAX_GUESSES}</p></div>`;
+      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.answer}</div>${clue}<p>Grown in ${n} of ${MAX_GUESSES}</p>${best}</div>`;
     } else if (game.status === 'lost') {
-      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.answer}</div>${clue}</div>`;
+      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.answer}</div>${clue}${best}</div>`;
     }
     $('result').innerHTML = result;
     const pct = s.played ? Math.round((100 * s.won) / s.played) : 0;
@@ -510,7 +512,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=11');
+    const res = await fetch('data/vines.json?v=12');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500;1,9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
   <div class="app">
@@ -64,13 +64,13 @@
         <div class="example" id="example"></div>
         <p class="small">If the answer is <b>PLANTER</b>, SLANT grows L→A, A→N and N→T, filling in L, A, N and T. S→L withers, because SL isn't in PLANTER.</p>
       </li>
-      <li><b>Other letters that belong in an empty blank turn yellow and drop into it</b> (the leftmost one, if there's a choice). Each blank takes one letter, so a letter the answer has once is never yellow twice.
+      <li><b>Other letters that belong in an empty blank turn yellow and drop into it</b> (the leftmost one, if there's a choice) as a hint. Each blank takes one letter, so a letter the answer has once is never yellow twice.
         <div class="example" id="example-2"></div>
-        <p class="small">PRONE grows no vines in PLANTER, but P, R, N and E all belong in it, so they fill in yellow.</p>
+        <p class="small">PRONE grows no vines in PLANTER, but P, R, N and E all belong in it, so they drop in yellow.</p>
       </li>
-      <li><b>Fill every blank within six guesses</b> to win, with vines or yellow letters. The clue tells you what you're aiming for, so choose words that contain the pairs you need.</li>
+      <li><b>Turn every blank green within six guesses</b> to win. Yellow letters are only hints: a blank counts once a vine reaches it. Every puzzle can be done in two guesses, and a few in just one. The clue tells you what you're aiming for, so choose words that contain the pairs you need.</li>
     </ol>
-    <p class="small">A new puzzle every day. Clues come from past New York Times crosswords.</p>
+    <p class="small">A new puzzle every day. Guesses can be any word Wordle accepts. Clues come from past New York Times crosswords.</p>
     <form method="dialog"><button class="primary" autofocus>Start growing</button></form>
   </dialog>
 
@@ -87,6 +87,6 @@
     </div>
   </dialog>
 
-  <script src="game.js?v=11"></script>
+  <script src="game.js?v=12"></script>
 </body>
 </html>

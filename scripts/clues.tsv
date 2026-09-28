@@ -53,6 +53,7 @@ DOUBLE	Exact look-alike	4
 VOLUME	Body, for hair	4
 SILVER	Second place	4
 MATURE	Grow up	4
+ADVICE	Tips, e.g.	6
 RENTAL	Blockbuster movie, e.g.	6
 TAKING	Pirating	2
 COMING	Word in many a promotional poster	3
@@ -312,6 +313,7 @@ STRUCK	Arrived, as inspiration	4
 BRIDAL	Like some long trains	4
 TRIBAL	Concerning Comanches, e.g.	6
 BUTLER	Usual suspect?	10
+ADVISE	Guide	2
 BOXING	Olympic sport	3
 TIMBER	Fall preceder?	9
 RULING	One may be 5-4	4
@@ -326,6 +328,7 @@ GATHER	Understand, so to speak	4
 BACKED	Patronized	3
 SLIGHT	Give the cold shoulder, say	6
 SAFELY	Without incident, say	7
+KIDNEY	Nephrologist's specialty	4
 ROCKET	What goes up after a countdown?	9
 PRIEST	Clerical worker?	10
 TRANCE	Under state?	9
@@ -483,6 +486,7 @@ AUCTION	Bridge type	4
 FASHION	Subject of Vogue	4
 TRADING	Activity for folks in the pits?	9
 HIMSELF	Word in a documentary's credits	2
+UPGRADE	Better model	3
 HEARING	Court procedure	4
 THERAPY	Headwork?	8
 PLASTIC	Credit cards	4
@@ -578,6 +582,7 @@ SCORING	Making a touchdown, for example	5
 SOLDIER	Servant in a cause	3
 SOLVING	What are you doing?	10
 DESTROY	Wipe off the map	4
+ANXIETY	Fearful feeling	3
 HARVEST	Autumn, typically	4
 SEATING	Concern for a hostess	3
 LAUNDRY	Heaps of dressing?	10
@@ -730,10 +735,12 @@ PROBATE	Contest of wills?	9
 GLACIER	There's a national park named for one	6
 LOBSTER	Seafood with claws	4
 FURNACE	Source of heat	4
+ANXIOUS	Impatient	2
 BAPTISM	Immersive experience	4
 CUTLERY	Part of a place setting	3
 BREWING	In the works	4
 PITCHER	Pub purchase for the table	3
+STANDBY	One way to fly	3
 ETHANOL	Renewable gasoline additive	4
 HOSPICE	Where a stranger may be taken in	2
 BRUSHED	Bit of excitement	4
@@ -789,6 +796,7 @@ URGENCY	Need for speed	3
 CONQUER	Overcome	2
 JEALOUS	Green, in a way	3
 SHOTGUN	Hunter's weapon	3
+SANDBOX	Place to build a castle	3
 BREADTH	Counterpart of length	4
 PELICAN	Louisiana's state bird	4
 SPINDLE	Rod used to make yarn	3
@@ -921,6 +929,7 @@ PORTABLE	Laptop, e.g.	6
 POWERFUL	Strong	2
 BEHAVIOR	Factor in a parole board's decision	2
 FESTIVAL	Mostly Mozart, for one	6
+BIRTHDAY	Hallmark occasion	4
 FORECAST	Rain, e.g.	6
 CREATION	Haydn oratorio, with "The"	3
 DAUGHTER	Female issue	4
@@ -928,6 +937,7 @@ IMPROVED	New partner	3
 DISCOVER	Sleuth out	3
 TRACKING	Spy satellite activity	3
 SPORTING	Kind of chance	2
+ADVISORY	Weather announcement	3
 INVESTOR	Wall Street figure	3
 RELATING	As (to)	4
 BECOMING	Flattering, as clothing	4
@@ -1038,6 +1048,7 @@ MANIFOLD	Car exhaust part	4
 PECULIAR	Funny	3
 MISTAKEN	In the wrong	3
 MANPOWER	Staffing level	4
+WATCHDOG	OSHA or the F.C.C.	4
 IMPACTED	Affected	3
 CLARINET	Pete Fountain played it	4
 HARMONIC	Pleasing to the ear	3
@@ -1092,6 +1103,7 @@ SYNDICATE	Agency that buys and distributes various newspaper features	2
 MICROWAVE	Hardly an attraction for a surfer?	9
 PORCELAIN	Fine home decoration	3
 INSPECTOR	Lestrade of Sherlock Holmes stories, e.g.	5
+BREAKDOWN	Analysis of components	3
 BOULEVARD	Sunset, e.g.	7
 OVERSIGHT	Act of omission ... or of a commission	3
 ALONGSIDE	Next to	3
@@ -1152,11 +1164,13 @@ CONTENT	Purring, say	5
 COLLEGE	Major undertaking?	10
 PROCESS	Summons, e.g.	6
 SCIENCE	Prestigious academic journal	4
+ADVANCED	Like Calculus II	3
 SELECT	Choose ... or choice	4
 REGISTER	Checkout sight	4
 HOWEVER	"Be that as it may ..."	3
 LIBRARY	A "fine" place?	9
 REALLY	"Oh, yeah?"	4
+FEEDBACK	Responses	3
 LOOKING	Ruler in a W.C.?	10
 COMPLETE	Consummate	2
 AGAINST	Meaning of "anti-"	4
@@ -1369,6 +1383,7 @@ FORMER	Onetime	3
 PRESENTED	Showed	2
 SETTING	Novel need	3
 ECONOMY	Budgeting class?	10
+HELPFUL	Lending a hand	4
 CRITICAL	Kind of thinking	4
 SECRETARY	Last-week-in-April honoree	3
 RELEVANT	Apropos	1
@@ -1377,6 +1392,7 @@ APPLIED	Submitted a résumé	4
 WEEKLY	Like the installments of "A Tale of Two Cities"	3
 DEMAND	Supply's partner, in economics	4
 ATTENTION	Absolute concentration, literally	4
+ADVANCE	Move up	4
 ALLOWED	Not against the rules	4
 CORRECT	"Ding, ding, ding!"	4
 NATION	Georgia, e.g.	7
@@ -1446,6 +1462,7 @@ CORNER	Drugstore location, often	4
 ELEMENT	He or I, but not you?	9
 SEPARATE	Not together	4
 DEFINE	Do some lexicography	4
+BREAKFAST	It may be continental	3
 DEVELOPER	One with lots to think about	2
 IDENTIFY	Pinpoint	3
 AVENUE	Broadway, e.g.	7
@@ -1460,6 +1477,7 @@ DOLLAR	Thing that shrinks when inflated?	8
 MOVEMENT	Progress in negotiations	3
 BASEBALL	Game of tag?	9
 APPROVAL	"Thumbs up" signification	3
+ADVENTURE	Thrill-seeker's pursuit	4
 OFFERING	Part of a church service	2
 ASSISTANT	Helper	2
 VARIABLE	Not fixed	4
@@ -1481,6 +1499,7 @@ PERSONNEL	Staff	2
 PASSED	Didn't fail	4
 PROMOTE	Talk up	4
 STATED	Explicitly said	4
+ADVANTAGE	Follower of deuce	4
 MAINTAIN	Hold	2
 PRIORITY	Right of way, say	7
 ESTIMATED	Arrival or departure approximation	4
@@ -1657,6 +1676,7 @@ WINNER	First person?	10
 EPISODE	Serial number?	9
 POTTER	Crafty person at a wheel?	9
 BULLETIN	Television interruption	4
+OXFORD	Alma mater for J. R. R. Tolkien and C. S. Lewis	3
 EXTENSIVE	Large-scale	3
 UNIVERSE	Everything, with "the"	4
 CANDIDATE	Runner, of a sort	4
@@ -1791,6 +1811,7 @@ ATTRIBUTE	... for a eulogist?	10
 INQUIRY	Fact-finding mission	4
 DESERT	Leave one's company?	10
 MERCURY	60's space project	3
+HANDBOOK	Manual	2
 NAVIGATE	Scandal depicted in "Avatar"?	10
 SUMMIT	Camp David event	4
 ESCAPE	Caribbean vacation, e.g.	7
@@ -1837,6 +1858,7 @@ KNOWING	Like some smiles and winks	3
 REPORTER	Newshawk	2
 SENTENCE	10 years, for example	7
 THROAT	Bad place for a frog	3
+VACUUM	One that sucks at work?	9
 DANCING	Waltzing, say	6
 WHENEVER	At a time of one's choosing	2
 LIFETIME	0 to 100, maybe	4
@@ -1948,6 +1970,7 @@ MOREOVER	Further	2
 MINIMAL	Not amounting to much	4
 DECLARED	Bid, in bridge	3
 DISPOSAL	Sink feature	4
+MIDNIGHT	What a clock might strike	3
 QUANTUM	Kind of leap	4
 LARGELY	For the most part	3
 PLEASANT	Like some dreams	3
@@ -1973,6 +1996,7 @@ DONATION	Gift to a nonprofit	4
 MANHATTAN	Result of wearing a fedora at the beach?	9
 TARGETED	Aimed at	4
 TWELVE	Rare roll with two dice	3
+ADVERSE	Not so good	3
 EXCERPT	Sound bite, e.g.	6
 PERFUME	Clichéd gift on Mother's Day	3
 RESTORE	Put right	4

@@ -275,6 +275,7 @@ svg { display: block; }
 .result .answer-word { font: 700 26px "Fraunces", Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--leaf-deep); }
 .result p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .result .result-clue { font-style: italic; }
+.result .result-par { margin-top: 8px; font-size: 13px; }
 .stats-title { margin: 14px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
 .stat-row b { display: block; font: 700 28px "Fraunces", Georgia, serif; }
