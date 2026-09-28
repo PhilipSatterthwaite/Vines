@@ -95,6 +95,7 @@
     $('clue-len').textContent = `(${game.answer.length})`;
     renderAnswer(arrivals);
     renderGrid();
+    renderKeyboard();
     $('practice-btn').textContent = practice === null ? 'Practice puzzle' : 'New practice puzzle';
     $('today-btn').hidden = practice === null;
   }
@@ -164,6 +165,17 @@
     row.querySelectorAll('.tile').forEach((tile, j) => {
       tile.textContent = entry[j] ?? '';
       tile.classList.toggle('filled', j < entry.length);
+    });
+  }
+
+  // Guessed letters turn green on the keyboard if they're in the answer, grey if not.
+  function renderKeyboard() {
+    const tried = new Set(game.guesses.join(''));
+    document.querySelectorAll('.key[data-key]').forEach(key => {
+      const k = key.dataset.key;
+      const guessed = k.length === 1 && tried.has(k);
+      key.classList.toggle('hit', guessed && game.answer.includes(k));
+      key.classList.toggle('absent', guessed && !game.answer.includes(k));
     });
   }
 
@@ -471,7 +483,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=7');
+    const res = await fetch('data/vines.json?v=8');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;

@@ -208,8 +208,9 @@ svg { display: block; }
   transition: background .1s, transform .08s;
 }
 .key:active { transform: scale(.94); background: var(--line); }
+.key.hit { background: var(--leaf); color: var(--on-leaf); }
+.key.absent { background: color-mix(in srgb, var(--muted) 45%, var(--bg)); color: color-mix(in srgb, var(--ink) 45%, transparent); }
 .key.wide { flex: 1.5 1 0; max-width: 68px; font-size: 12.5px; letter-spacing: .02em; }
-.key.enter { background: var(--leaf); color: var(--on-leaf); }
 .key svg { width: 22px; height: 22px; margin: auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .kb-spacer { flex: .5 1 0; max-width: 22px; }
 
