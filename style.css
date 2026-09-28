@@ -132,8 +132,6 @@ svg { display: block; }
   text-transform: uppercase;
 }
 .node:hover circle { stroke: var(--leaf-light); }
-.node.active circle { fill: var(--leaf); stroke: var(--leaf-deep); }
-.node.active text { fill: #fff; }
 .node.pressed circle { transform: scale(.92); transform-box: fill-box; transform-origin: center; }
 .node.bloom circle { fill: var(--bloom); stroke: var(--bloom); }
 .node.bloom text { fill: #fff; }

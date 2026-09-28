@@ -221,11 +221,9 @@
   }
 
   function updateNodes() {
+    // The letters stay plain while you play; they only colour in at the end.
     const over = game.status !== 'playing';
-    document.querySelectorAll('#nodes .node').forEach(g => {
-      g.classList.toggle('active', !over && entry.includes(g.dataset.letter));
-      g.classList.toggle('bloom', over);
-    });
+    document.querySelectorAll('#nodes .node').forEach(g => g.classList.toggle('bloom', over));
   }
 
   // ---------- input ----------
@@ -532,7 +530,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=3');
+    const res = await fetch('data/vines.json?v=4');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     LONG = new Set(data.long.split(' '));

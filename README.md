@@ -22,8 +22,10 @@ You get six guesses in total:
 
 `node scripts/build.mjs` writes `data/vines.json`: the guess dictionaries
 (from ENABLE, downloaded once into `scripts/.cache`) and the daily puzzles.
-Answers come from `scripts/targets.txt`, common 6- to 9-letter words; rings
-with fewer than 12 playable 5-letter words are skipped. Puzzle #1 is
+Answers come from `scripts/targets.txt`, common 6- to 9-letter words. A
+puzzle is kept only if its ring has at least one other common word (from
+`scripts/common.txt`) that uses every letter, not counting the answer with an
+ending added, and at least 12 playable 5-letter words. Puzzle #1 is
 2026-09-27.
 
 When `style.css`, `game.js` or the data change, bump the `?v=` numbers in
