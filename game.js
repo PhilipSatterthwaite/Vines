@@ -1,10 +1,9 @@
 (() => {
   const MAX_GUESSES = 6;
-  const MAX_LENGTH = 12;
   const EPOCH = new Date(2026, 8, 27); // puzzle #1
   const NS = 'http://www.w3.org/2000/svg';
   const LEAF = 'M0 0C3-5 9-6.5 14-4.5C10.5 1 5 3 0 0Z';
-  const TIP = 'M3 0L-7-5.5Q-4 0-7 5.5Z';
+  const KEYS = ['qwertyuiop', 'asdfghjkl', '>zxcvbnm<'];
 
   const $ = id => document.getElementById(id);
   const store = {
@@ -16,25 +15,19 @@
     },
   };
 
-  let data, FIVE, LONG;
+  let data, FIVE;
   let practice = null;     // puzzle index while practising, null for the daily
   let game;
   let entry = [];
-  let fresh = new Set();   // links discovered by the latest guess, to animate
-  let hideDead = store.get('vines:hideDead', false);
-  let geom;                // letter -> {x, y, angle}
 
   function dayIndex(date = new Date()) {
     const midnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     return Math.round((midnight - EPOCH) / 864e5);
   }
 
-  function decode(puzzle) {
-    const [ring, key] = puzzle.split(':');
-    return { ring, target: [...key].map(c => ring[+c]).join('') };
-  }
-
-  const dailyKey = day => `vines:daily:${day}`;
+  const reveal = hidden => [...atob(hidden)].reverse().join('');
+  const dailyKey = day => `vines:clue:${day}`;
+  const STATS_KEY = 'vines:clue:stats';
 
   // ---------- game state ----------
 
@@ -42,282 +35,56 @@
     const list = data.puzzles;
     const day = dayIndex();
     const idx = practice ?? ((day % list.length) + list.length) % list.length;
-    const { ring, target } = decode(list[idx]);
+    const [clue, hidden] = list[idx];
+    const answer = reveal(hidden);
     const saved = practice === null ? store.get(dailyKey(day), null) : null;
-    const ok = saved && saved.ring === ring;
+    const ok = saved && saved.answer === hidden;
     game = {
-      ring, target, day,
-      order: ok && saved.order ? saved.order : shuffle([...ring]),
+      clue, answer, hidden, day,
       guesses: ok ? saved.guesses : [],
       status: ok ? saved.status : 'playing',
       counted: ok ? !!saved.counted : false,
     };
     entry = [];
-    fresh = new Set();
-    buildRing();
     renderAll();
+    requestAnimationFrame(() => drawVines());
   }
 
   function save() {
     if (practice !== null) return;
-    const { ring, order, guesses, status, counted } = game;
-    store.set(dailyKey(game.day), { ring, order, guesses, status, counted });
+    const { hidden, guesses, status, counted } = game;
+    store.set(dailyKey(game.day), { answer: hidden, guesses, status, counted });
   }
 
-  const pairsOf = w => Array.from({ length: w.length - 1 }, (_, i) => w[i] + w[i + 1]);
-
-  function links(guesses = game.guesses) {
-    const map = new Map();
-    for (const g of guesses) {
-      if (g.length !== 5) continue;
-      for (const pair of pairsOf(g)) map.set(pair, game.target.includes(pair));
+  // Every place a pair from this guess sits in the answer: j is the pair's
+  // position in the guess, i its position in the answer.
+  function matches(guess) {
+    const out = [];
+    for (let j = 0; j < 4; j++) {
+      const pair = guess[j] + guess[j + 1];
+      for (let i = game.answer.indexOf(pair); i >= 0; i = game.answer.indexOf(pair, i + 1)) out.push({ j, i });
     }
-    return map;
+    return out;
   }
 
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+  function revealed(guesses = game.guesses) {
+    const set = new Set();
+    for (const g of guesses) for (const { i } of matches(g)) { set.add(i); set.add(i + 1); }
+    return set;
   }
 
-  // ---------- ring ----------
-
-  function el(tag, attrs = {}, parent) {
-    const node = document.createElementNS(NS, tag);
-    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-    if (parent) parent.appendChild(node);
-    return node;
-  }
-
-  function buildRing() {
-    const svg = $('ring');
-    svg.innerHTML = '';
-    svg.classList.toggle('hide-dead', hideDead);
-    const n = game.order.length;
-    const i = Math.min(Math.max(n - 5, 0), 4);
-    const R = [118, 126, 132, 136, 138][i];
-    const r = [34, 32, 30, 29, 27][i];
-    geom = { r, R, pos: {} };
-    game.order.forEach((letter, k) => {
-      const angle = -Math.PI / 2 + (k * 2 * Math.PI) / n;
-      geom.pos[letter] = { x: 200 + R * Math.cos(angle), y: 200 + R * Math.sin(angle), angle };
-    });
-
-    el('circle', { class: 'halo', cx: 200, cy: 200, r: R }, svg);
-    el('g', { id: 'dead-vines', class: 'dead-group' }, svg);
-    el('g', { id: 'live-vines' }, svg);
-    el('g', { id: 'answer-vines' }, svg);
-    const nodes = el('g', { id: 'nodes' }, svg);
-    el('g', { id: 'flowers' }, svg);
-
-    for (const letter of game.order) {
-      const { x, y } = geom.pos[letter];
-      const g = el('g', { class: 'node', 'data-letter': letter, transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})`, role: 'button', 'aria-label': letter.toUpperCase() }, nodes);
-      el('circle', { r }, g);
-      el('text', { y: 1 }, g).textContent = letter;
-      g.addEventListener('pointerdown', () => g.classList.add('pressed'));
-      const release = () => g.classList.remove('pressed');
-      g.addEventListener('pointerleave', release);
-      g.addEventListener('pointercancel', release);
-      g.addEventListener('pointerup', () => { release(); type(letter); });
-    }
-    drawVines();
-  }
-
-  // Every vine is a cubic Bézier {p0, c1, c2, p3}.
-  function curve(a, b) {
-    const pa = geom.pos[a], pb = geom.pos[b];
-    if (a === b) {
-      // A doubled letter: a loop out from the letter and back into it.
-      const { angle } = pa;
-      const on = (da, dist) => ({ x: pa.x + dist * Math.cos(angle + da), y: pa.y + dist * Math.sin(angle + da) });
-      return { p0: on(-0.45, geom.r + 2), c1: on(-0.8, geom.r + 56), c2: on(0.8, geom.r + 56), p3: on(0.45, geom.r + 5) };
-    }
-    const dx = pb.x - pa.x, dy = pb.y - pa.y;
-    const d = Math.hypot(dx, dy);
-    // Bend to the left of the direction of travel, so A→B and B→A never overlap.
-    // A bend toward the centre can be generous; one outward stays shallow so it
-    // doesn't run under the letters between A and B.
-    const nx = dy / d, ny = -dx / d;
-    const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
-    const inward = nx * (200 - mx) + ny * (200 - my) > 0;
-    const k = d * (inward ? 0.22 : 0.05);
-    const c = { x: mx + nx * k, y: my + ny * k };
-    const trim = (p, dist) => {
-      const vx = c.x - p.x, vy = c.y - p.y, l = Math.hypot(vx, vy);
-      return { x: p.x + (vx / l) * dist, y: p.y + (vy / l) * dist };
-    };
-    const p0 = trim(pa, geom.r + 3), p3 = trim(pb, geom.r + 6);
-    const lerp = (p, t) => ({ x: p.x + (c.x - p.x) * t, y: p.y + (c.y - p.y) * t });
-    return { p0, c1: lerp(p0, 2 / 3), c2: lerp(p3, 2 / 3), p3 };
-  }
-  const at = (q, t) => {
-    const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
-    return { x: a * q.p0.x + b * q.c1.x + c * q.c2.x + d * q.p3.x, y: a * q.p0.y + b * q.c1.y + c * q.c2.y + d * q.p3.y };
-  };
-  const heading = (q, t) => {
-    const u = 1 - t;
-    const f = k => 3 * u * u * (q.c1[k] - q.p0[k]) + 6 * u * t * (q.c2[k] - q.c1[k]) + 3 * t * t * (q.p3[k] - q.c2[k]);
-    return (Math.atan2(f('y'), f('x')) * 180) / Math.PI;
-  };
-  const fmt = p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-  const pathD = q => `M${fmt(q.p0)}C${fmt(q.c1)} ${fmt(q.c2)} ${fmt(q.p3)}`;
-  const place = (q, t, turn = 0, scale = 1) => {
-    const p = at(q, t);
-    return `translate(${fmt(p)}) rotate(${(heading(q, t) + turn).toFixed(1)}) scale(${scale})`;
-  };
-
-  function drawVine(parent, a, b, kind, delay = 0, animate = false) {
-    const q = curve(a, b);
-    const g = el('g', {}, parent);
-    // Withered vines keep their own dash pattern, so they fade in rather than grow.
-    const motion = animate ? (kind === 'dead' ? ' fade' : ' grow') : '';
-    const path = el('path', { class: `vine ${kind}${motion}`, d: pathD(q) }, g);
-    if (kind !== 'dead') path.setAttribute('pathLength', 1);
-    if (animate) path.style.animationDelay = `${delay}s`;
-    const extras = [];
-    if (kind === 'live') {
-      extras.push(el('path', { class: 'leaf', d: LEAF, transform: place(q, 0.3, -55) }, g));
-      extras.push(el('path', { class: 'leaf dark', d: LEAF, transform: place(q, 0.56, 55) }, g));
-      extras.push(el('path', { class: 'tip', d: TIP, transform: place(q, 1) }, g));
-    } else {
-      extras.push(el('path', { class: `tip ${kind}`, d: TIP, transform: place(q, 1, 0, kind === 'dead' ? 0.75 : 1.1) }, g));
-    }
-    if (animate) {
-      extras.forEach((x, i) => { x.classList.add('pop'); x.style.animationDelay = `${delay + 0.35 + i * 0.18}s`; });
-    }
-  }
-
-  function drawVines() {
-    const dead = $('dead-vines'), live = $('live-vines'), answer = $('answer-vines'), flowers = $('flowers');
-    dead.innerHTML = live.innerHTML = answer.innerHTML = flowers.innerHTML = '';
-    let i = 0;
-    for (const [pair, alive] of links()) {
-      const animate = fresh.has(pair);
-      drawVine(alive ? live : dead, pair[0], pair[1], alive ? 'live' : 'dead', animate ? 0.15 * i++ : 0, animate);
-    }
-    if (game.status !== 'playing') drawAnswer();
-  }
-
-  function drawAnswer() {
-    const animate = fresh.has('*answer');
-    [...new Set(pairsOf(game.target))].forEach((pair, i) =>
-      drawVine($('answer-vines'), pair[0], pair[1], 'answer', 0.3 + i * 0.28, animate));
-    if (game.status !== 'won') return;
-    game.order.forEach((letter, i) => {
-      const { angle } = geom.pos[letter];
-      const d = geom.R - geom.r + 3;
-      const f = el('g', { class: 'flower', transform: `translate(${(200 + d * Math.cos(angle)).toFixed(1)} ${(200 + d * Math.sin(angle)).toFixed(1)})` }, $('flowers'));
-      if (animate) f.style.animationDelay = `${2 + i * 0.12}s`;
-      for (let p = 0; p < 5; p++) {
-        const a = (p * 72 * Math.PI) / 180;
-        el('circle', { class: 'petal', cx: (5 * Math.cos(a)).toFixed(1), cy: (5 * Math.sin(a)).toFixed(1), r: 4.4 }, f);
-      }
-      el('circle', { class: 'heart', r: 3 }, f);
-    });
-  }
-
-  function updateNodes() {
-    // The letters stay plain while you play; they only colour in at the end.
-    const over = game.status !== 'playing';
-    document.querySelectorAll('#nodes .node').forEach(g => g.classList.toggle('bloom', over));
-  }
-
-  // ---------- input ----------
-
-  function type(letter) {
-    if (game.status !== 'playing' || entry.length >= MAX_LENGTH) return;
-    entry.push(letter);
-    renderEntry(true);
-    updateNodes();
-  }
-
-  function del() {
-    if (!entry.length) return;
-    entry.pop();
-    renderEntry();
-    updateNodes();
-  }
-
-  function reject(msg) {
-    toast(msg);
-    const e = $('entry');
-    e.classList.remove('shake');
-    void e.offsetWidth;
-    e.classList.add('shake');
-  }
-
-  function submit() {
-    if (game.status !== 'playing') return;
-    const word = entry.join('');
-    const left = MAX_GUESSES - game.guesses.length;
-
-    if (word.length === 5) {
-      if (left === 1) return reject('Last guess: it has to be the word itself');
-      if (game.guesses.includes(word)) return reject('Already grown');
-      if (!FIVE.has(word)) return reject('Not in the word list');
-      const before = links();
-      game.guesses.push(word);
-      const after = links();
-      fresh = new Set([...after.keys()].filter(p => !before.has(p)));
-      const grew = [...fresh].filter(p => after.get(p)).length;
-      toast(grew ? `${grew} new vine${grew > 1 ? 's' : ''} grew` : fresh.size ? 'Nothing new grew' : 'No new pairs there');
-    } else if (word.length > 5) {
-      if (game.order.some(c => !word.includes(c))) return reject('The word uses every letter on the ring');
-      if (game.guesses.includes(word)) return reject('Already tried that one');
-      if (!LONG.has(word)) return reject('Not in the word list');
-      game.guesses.push(word);
-      fresh = new Set();
-      if (word === game.target) game.status = 'won';
-      else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
-      else toast('Not it');
-    } else {
-      return reject('5 letters grow vines · longer words guess the answer');
-    }
-
-    entry = [];
-    if (game.status !== 'playing') {
-      fresh.add('*answer');
-      finish();
-    }
-    save();
-    drawVines();
-    renderAll();
-    if (game.status !== 'playing') setTimeout(() => openStats(), 2800);
-  }
-
-  function finish() {
-    if (practice !== null || game.counted) return;
-    game.counted = true;
-    const s = store.get('vines:stats', { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null });
-    s.played++;
-    if (game.status === 'won') {
-      s.won++;
-      s.dist[game.guesses.length - 1]++;
-      s.streak = s.last === game.day - 1 ? s.streak + 1 : 1;
-      s.best = Math.max(s.best, s.streak);
-      s.last = game.day;
-    } else {
-      s.streak = 0;
-      s.last = null;
-    }
-    store.set('vines:stats', s);
-  }
+  const pairLive = (guess, j) => game.answer.includes(guess[j] + guess[j + 1]);
 
   // ---------- rendering ----------
 
-  function renderAll() {
+  function renderAll(arrivals = new Map()) {
     renderStatus();
-    renderEntry();
-    renderHistory();
-    updateNodes();
+    $('clue-text').textContent = game.clue;
+    $('clue-len').textContent = `(${game.answer.length})`;
+    renderAnswer(arrivals);
+    renderGrid();
     $('practice-btn').textContent = practice === null ? 'Practice puzzle' : 'New practice puzzle';
     $('today-btn').hidden = practice === null;
-    $('wither-btn').setAttribute('aria-pressed', hideDead);
-    $('enter-btn').disabled = game.status !== 'playing';
   }
 
   function leafIcon(used) {
@@ -331,74 +98,223 @@
     $('budget').setAttribute('aria-label', `${MAX_GUESSES - used} guesses left`);
   }
 
-  function connector(a, b, known) {
-    if (!a || !b) return '<span class="link"></span>';
-    const state = known.get(a + b);
-    return `<span class="link ${state === true ? 'live' : state === false ? 'dead' : ''}"></span>`;
-  }
-
-  function renderEntry(popLast = false) {
-    const known = links();
-    const slots = Math.max(5, entry.length);
-    let html = '';
-    for (let i = 0; i < slots; i++) {
-      if (i > 0) html += connector(entry[i - 1], entry[i], known);
-      const filled = i < entry.length;
-      const pop = popLast && i === entry.length - 1 ? ' pop-in' : '';
-      html += `<span class="slot${i >= 5 ? ' answer-slot' : ''}${filled ? ' filled' + pop : ''}">${filled ? entry[i] : ''}</span>`;
-    }
-    const e = $('entry');
-    e.innerHTML = html;
-    e.style.setProperty('--n', Math.max(7, slots));
-
-    const left = MAX_GUESSES - game.guesses.length;
-    let hint;
-    if (game.status === 'won') hint = 'Solved. Come back tomorrow for a new one.';
-    else if (game.status === 'lost') hint = `The word was ${game.target.toUpperCase()}.`;
-    else if (left === 1) hint = 'Last guess: it has to be the word itself';
-    else if (entry.length === 5) hint = 'Enter to grow vines';
-    else if (entry.length > 5) hint = 'Enter to guess the word';
-    else hint = '5 letters grow vines · longer words guess the answer';
-    $('entry-hint').textContent = hint;
-  }
-
-  function rowHTML(word, i, known) {
-    let tiles = '';
-    if (word.length === 5) {
-      for (let j = 0; j < 5; j++) {
-        if (j) tiles += connector(word[j - 1], word[j], known);
-        tiles += `<span class="tile">${word[j]}</span>`;
+  // arrivals: answer position -> seconds until its vine reaches it.
+  function renderAnswer(arrivals = new Map(), bloomNow = false) {
+    const shown = revealed();
+    const box = $('answer');
+    box.style.setProperty('--n', game.answer.length);
+    box.innerHTML = [...game.answer].map((letter, i) => {
+      if (game.status === 'won') {
+        const style = bloomNow ? ` style="animation-delay:${(i * 0.08).toFixed(2)}s"` : ' style="animation:none"';
+        return `<span class="tile bloom"${style}>${letter}</span>`;
       }
-      return `<div class="row"><span class="num">${i + 1}</span>${tiles}<span class="end"></span></div>`;
-    }
-    const win = word === game.target;
-    for (let j = 0; j < word.length; j++) {
-      if (j) tiles += '<span class="link"></span>';
-      tiles += `<span class="tile">${word[j]}</span>`;
-    }
-    return `<div class="row answer${win ? ' win' : ''}" style="--n:${Math.max(7, word.length)}"><span class="num">${i + 1}</span>${tiles}<span class="end">${win ? '✿' : '✗'}</span></div>`;
+      if (shown.has(i)) {
+        const t = arrivals.get(i);
+        return `<span class="tile filled${t !== undefined ? ' arrive' : ''}"${t !== undefined ? ` style="animation-delay:${t.toFixed(2)}s"` : ''}>${letter}</span>`;
+      }
+      if (game.status === 'lost') return `<span class="tile missed">${letter}</span>`;
+      return '<span class="tile"></span>';
+    }).join('');
   }
 
-  function renderHistory() {
-    const known = links();
-    $('history').innerHTML = game.guesses.length
-      ? game.guesses.map((w, i) => rowHTML(w, i, known)).join('')
-      : '<p class="history-empty">Your guesses will grow here.</p>';
+  function linkHTML(guess, j) {
+    return `<span class="link ${pairLive(guess, j) ? 'live' : 'dead'}"></span>`;
+  }
+
+  function renderGrid() {
+    let html = '';
+    for (let r = 0; r < MAX_GUESSES; r++) {
+      const guess = game.guesses[r];
+      if (guess) {
+        let row = '';
+        for (let j = 0; j < 5; j++) {
+          if (j) row += linkHTML(guess, j - 1);
+          row += `<span class="tile">${guess[j]}</span>`;
+        }
+        html += `<div class="row done" data-row="${r}">${row}</div>`;
+      } else if (r === game.guesses.length && game.status === 'playing') {
+        let row = '';
+        for (let j = 0; j < 5; j++) {
+          if (j) row += '<span class="link"></span>';
+          row += `<span class="tile${j < entry.length ? ' filled' : ''}">${entry[j] ?? ''}</span>`;
+        }
+        html += `<div class="row current" id="current-row">${row}</div>`;
+      } else {
+        html += `<div class="row empty">${'<span class="tile"></span><span class="link"></span>'.repeat(4)}<span class="tile"></span></div>`;
+      }
+    }
+    $('grid').innerHTML = html;
+  }
+
+  function renderCurrentRow() {
+    const row = $('current-row');
+    if (!row) return;
+    row.querySelectorAll('.tile').forEach((tile, j) => {
+      tile.textContent = entry[j] ?? '';
+      tile.classList.toggle('filled', j < entry.length);
+    });
+  }
+
+  // ---------- vines ----------
+
+  function el(tag, attrs = {}, parent) {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  // Draws every vine; the ones from row animateRow grow in.
+  function drawVines(animateRow = -1) {
+    const svg = $('vines');
+    const board = $('board').getBoundingClientRect();
+    svg.setAttribute('width', board.width);
+    svg.setAttribute('height', board.height);
+    svg.innerHTML = '';
+    const answerTiles = $('answer').children;
+    const rel = r => ({ left: r.left - board.left, right: r.right - board.left, top: r.top - board.top, bottom: r.bottom - board.top });
+
+    game.guesses.forEach((guess, r) => {
+      const row = document.querySelector(`.row[data-row="${r}"]`);
+      if (!row) return;
+      const links = row.querySelectorAll('.link');
+      const rowTop = rel(row.getBoundingClientRect()).top;
+      matches(guess).forEach(({ j, i }, k) => {
+        const link = rel(links[j].getBoundingClientRect());
+        const a = rel(answerTiles[i].getBoundingClientRect());
+        const b = rel(answerTiles[i + 1].getBoundingClientRect());
+        const start = { x: (link.left + link.right) / 2, y: rowTop + 6 };
+        const end = { x: (a.right + b.left) / 2, y: a.bottom - 4 };
+        const dy = start.y - end.y;
+        const q = { p0: start, c1: { x: start.x, y: start.y - dy * 0.55 }, c2: { x: end.x, y: end.y + dy * 0.45 }, p3: end };
+        const animate = r === animateRow;
+        const delay = 0.15 * k;
+        drawVine(svg, q, animate, delay, (r + k) % 2 ? 1 : -1);
+      });
+    });
+  }
+
+  const at = (q, t) => {
+    const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    return { x: a * q.p0.x + b * q.c1.x + c * q.c2.x + d * q.p3.x, y: a * q.p0.y + b * q.c1.y + c * q.c2.y + d * q.p3.y };
+  };
+  const heading = (q, t) => {
+    const u = 1 - t;
+    const f = k => 3 * u * u * (q.c1[k] - q.p0[k]) + 6 * u * t * (q.c2[k] - q.c1[k]) + 3 * t * t * (q.p3[k] - q.c2[k]);
+    return (Math.atan2(f('y'), f('x')) * 180) / Math.PI;
+  };
+  const fmt = p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+
+  function drawVine(svg, q, animate, delay, side) {
+    const g = el('g', {}, svg);
+    const path = el('path', { class: `vine${animate ? ' grow' : ''}`, d: `M${fmt(q.p0)}C${fmt(q.c1)} ${fmt(q.c2)} ${fmt(q.p3)}`, pathLength: 1 }, g);
+    if (animate) path.style.animationDelay = `${delay}s`;
+    [[0.3, 55 * side, 'leaf'], [0.55, -55 * side, 'leaf dark'], [0.8, 55 * side, 'leaf']].forEach(([t, turn, cls], n) => {
+      const p = at(q, t);
+      const leaf = el('path', { class: cls, d: LEAF, transform: `translate(${fmt(p)}) rotate(${(heading(q, t) + turn).toFixed(1)}) scale(.85)` }, g);
+      if (animate) { leaf.classList.add('pop'); leaf.style.animationDelay = `${delay + 0.3 + n * 0.15}s`; }
+    });
+  }
+
+  // ---------- input ----------
+
+  function type(letter) {
+    if (game.status !== 'playing' || entry.length >= 5) return;
+    entry.push(letter);
+    renderCurrentRow();
+  }
+
+  function del() {
+    if (!entry.length) return;
+    entry.pop();
+    renderCurrentRow();
+  }
+
+  function reject(msg) {
+    toast(msg);
+    const row = $('current-row');
+    if (!row) return;
+    row.classList.remove('shake');
+    void row.offsetWidth;
+    row.classList.add('shake');
+  }
+
+  function submit() {
+    if (game.status !== 'playing') return;
+    const word = entry.join('');
+    if (word.length < 5) return reject('Guesses are 5 letters');
+    if (game.guesses.includes(word)) return reject('Already guessed');
+    if (!FIVE.has(word)) return reject('Not in the word list');
+
+    const before = revealed();
+    game.guesses.push(word);
+    entry = [];
+    const found = matches(word);
+    const arrivals = new Map();
+    found.forEach(({ i }, k) => {
+      const t = 0.15 * k + 0.75;
+      for (const p of [i, i + 1]) if (!before.has(p) && !arrivals.has(p)) arrivals.set(p, t);
+    });
+
+    if (revealed().size === game.answer.length) game.status = 'won';
+    else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
+
+    const newLetters = arrivals.size;
+    if (game.status === 'playing') {
+      toast(newLetters ? `${newLetters} letter${newLetters > 1 ? 's' : ''} grew in` : found.length ? 'Those vines were already grown' : 'Nothing took root');
+    }
+
+    finish();
+    save();
+    // Show the board as if play went on until the vines land; then bloom or reveal.
+    const status = game.status;
+    game.status = 'playing';
+    renderAll(arrivals);
+    game.status = status;
+    requestAnimationFrame(() => drawVines(game.guesses.length - 1));
+
+    if (status !== 'playing') {
+      const landed = Math.max(0.9, ...arrivals.values()) + 0.6;
+      setTimeout(() => {
+        renderGrid();
+        renderAnswer(new Map(), true);
+        requestAnimationFrame(() => drawVines());
+      }, landed * 1000);
+      setTimeout(openStats, landed * 1000 + 1500);
+    }
+  }
+
+  function finish() {
+    if (game.status === 'playing' || practice !== null || game.counted) return;
+    game.counted = true;
+    const s = store.get(STATS_KEY, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null });
+    s.played++;
+    if (game.status === 'won') {
+      s.won++;
+      s.dist[game.guesses.length - 1]++;
+      s.streak = s.last === game.day - 1 ? s.streak + 1 : 1;
+      s.best = Math.max(s.best, s.streak);
+      s.last = game.day;
+    } else {
+      s.streak = 0;
+      s.last = null;
+    }
+    store.set(STATS_KEY, s);
   }
 
   // ---------- stats & sharing ----------
 
   function openStats() {
-    const s = store.get('vines:stats', { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
+    const s = store.get(STATS_KEY, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
     const over = game.status !== 'playing';
-    const vines = [...links().values()].filter(Boolean).length;
+    const clue = `<p class="result-clue">${escapeHTML(game.clue)}</p>`;
     let result = '';
     if (game.status === 'won') {
       const n = game.guesses.length;
       const words = ['Perfect bloom', 'Magnificent', 'In full bloom', 'Flourishing', 'Growing nicely', 'Just in time'];
-      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.target}</div><p>Solved in ${n} of ${MAX_GUESSES} · ${vines} vine${vines === 1 ? '' : 's'} grown</p></div>`;
+      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.answer}</div>${clue}<p>Grown in ${n} of ${MAX_GUESSES}</p></div>`;
     } else if (game.status === 'lost') {
-      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.target}</div></div>`;
+      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.answer}</div>${clue}</div>`;
     }
     $('result').innerHTML = result;
     const pct = s.played ? Math.round((100 * s.won) / s.played) : 0;
@@ -415,6 +331,8 @@
     if (over) $('share-btn').focus();
   }
 
+  const escapeHTML = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
   function tickCountdown() {
     const now = new Date();
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -429,11 +347,10 @@
   function shareText() {
     const score = game.status === 'won' ? game.guesses.length : 'X';
     const title = practice === null ? `Vines #${game.day + 1}` : 'Vines practice';
-    const lines = game.guesses.map(w => {
-      if (w.length !== 5) return w === game.target ? '🌸' : '❌';
-      return pairsOf(w).map(p => game.target.includes(p) ? '🟩' : '🟫').join('');
-    });
-    return `${title} · ${score}/${MAX_GUESSES}\n${lines.join('\n')}\n${location.origin}${location.pathname}`;
+    const lines = game.guesses.map(w => [0, 1, 2, 3].map(j => pairLive(w, j) ? '🟩' : '🟫').join(''));
+    const shown = revealed();
+    const top = [...game.answer].map((_, i) => shown.has(i) ? '🌸' : '▫️').join('');
+    return `${title} · ${score}/${MAX_GUESSES}\n${top}\n${lines.join('\n')}\n${location.origin}${location.pathname}`;
   }
 
   async function share() {
@@ -462,35 +379,37 @@
   // ---------- help example ----------
 
   function renderExample() {
-    const word = 'banal', target = 'balloon';
-    let html = '';
+    const answer = 'planter', guess = 'slant';
+    const top = [...answer].map((c, i) => i >= 1 && i <= 4 ? `<span class="tile filled">${c}</span>` : '<span class="tile"></span>').join('');
+    let row = '';
     for (let j = 0; j < 5; j++) {
-      if (j) html += `<span class="link ${target.includes(word[j - 1] + word[j]) ? 'live' : 'dead'}"></span>`;
-      html += `<span class="tile">${word[j]}</span>`;
+      if (j) row += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
+      row += `<span class="tile">${guess[j]}</span>`;
     }
-    $('example').innerHTML = html;
+    $('example').innerHTML = `<div class="answer">${top}</div><div class="arrow">↑ grown from</div><div class="row">${row}</div>`;
+  }
+
+  // ---------- keyboard ----------
+
+  function buildKeyboard() {
+    $('keyboard').innerHTML = KEYS.map(row => `<div class="kb-row">${[...row].map(k => {
+      if (k === '>') return '<button class="key wide enter" data-key="enter" tabindex="-1">Enter</button>';
+      if (k === '<') return '<button class="key wide" data-key="del" aria-label="Delete" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M9 5h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button>';
+      return `<button class="key" data-key="${k}" tabindex="-1">${k}</button>`;
+    }).join('')}</div>`).join('');
+    $('keyboard').addEventListener('click', e => {
+      const key = e.target.closest('.key')?.dataset.key;
+      if (!key) return;
+      if (key === 'enter') submit();
+      else if (key === 'del') del();
+      else type(key);
+    });
   }
 
   // ---------- wiring ----------
 
   function wire() {
-    $('del-btn').addEventListener('click', del);
-    $('enter-btn').addEventListener('click', submit);
-    $('shuffle-btn').addEventListener('click', () => {
-      const old = game.order.join('');
-      do shuffle(game.order); while (game.order.join('') === old);
-      fresh = new Set();
-      save();
-      buildRing();
-      updateNodes();
-    });
-    $('wither-btn').addEventListener('click', () => {
-      hideDead = !hideDead;
-      store.set('vines:hideDead', hideDead);
-      $('ring').classList.toggle('hide-dead', hideDead);
-      $('wither-btn').setAttribute('aria-pressed', hideDead);
-      toast(hideDead ? 'Withered vines hidden' : 'Withered vines shown', 1100);
-    });
+    buildKeyboard();
     $('help-btn').addEventListener('click', () => $('help').showModal());
     $('stats-btn').addEventListener('click', openStats);
     $('share-btn').addEventListener('click', share);
@@ -508,18 +427,19 @@
       if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
       if (e.key === 'Enter') { e.preventDefault(); submit(); }
       else if (e.key === 'Backspace') { e.preventDefault(); del(); }
-      else if (/^[a-z]$/i.test(e.key)) {
-        const letter = e.key.toLowerCase();
-        if (game.status !== 'playing') return;
-        if (game.order.includes(letter)) type(letter);
-        else toast(`${letter.toUpperCase()} isn't on the ring`, 1000);
-      }
+      else if (/^[a-z]$/i.test(e.key)) type(e.key.toLowerCase());
     });
 
     // Close a dialog by clicking its backdrop.
     document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => {
       if (e.target === d) d.close();
     }));
+
+    let resizeFrame;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => game && drawVines());
+    });
 
     // A new day may have started while the tab sat open.
     document.addEventListener('visibilitychange', () => {
@@ -530,14 +450,14 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=4');
+    const res = await fetch('data/vines.json?v=5');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
-    LONG = new Set(data.long.split(' '));
+    await document.fonts?.ready;
     load();
     // The rules changed, so show them again even to people who saw the old ones.
-    if (!store.get('vines:seen-v3', false)) {
-      store.set('vines:seen-v3', true);
+    if (!store.get('vines:seen-clue', false)) {
+      store.set('vines:seen-clue', true);
       $('help').showModal();
     }
   }

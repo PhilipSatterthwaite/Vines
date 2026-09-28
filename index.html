@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vines</title>
-  <meta name="description" content="Grow vines between letters to find the hidden word.">
+  <meta name="description" content="A crossword clue, a row of blanks, and six 5-letter words to grow the answer in.">
   <meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121812" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 26C10 14 18 8 27 6c-2 9-8 17-20 20z' fill='%233f7d3a'/%3E%3Cpath d='M6 26C12 20 17 15 22 11' stroke='%23f3eee1' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500;1,9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <div class="app">
@@ -33,27 +33,17 @@
       <div class="budget" id="budget" aria-label="Guesses left"></div>
     </div>
 
-    <div class="garden">
-      <svg id="ring" viewBox="0 0 400 400" aria-label="Letter ring"></svg>
+    <section class="clue" aria-label="Clue">
+      <p class="clue-text"><span id="clue-text"></span> <span class="clue-len" id="clue-len"></span></p>
+    </section>
+
+    <div class="board" id="board">
+      <svg class="vines" id="vines" aria-hidden="true"></svg>
+      <div class="answer" id="answer" aria-label="The answer"></div>
+      <div class="grid" id="grid" aria-label="Your guesses"></div>
     </div>
 
-    <div class="entry" id="entry" aria-live="polite"></div>
-    <p class="entry-hint" id="entry-hint"></p>
-
-    <div class="controls">
-      <button class="ctrl" id="del-btn" aria-label="Delete">
-        <svg viewBox="0 0 24 24"><path d="M9 5h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>
-      </button>
-      <button class="ctrl" id="shuffle-btn" aria-label="Shuffle letters">
-        <svg viewBox="0 0 24 24"><path d="M4 7h3.5c4.5 0 5.5 10 10 10H20M4 17h3.5c1.6 0 2.7-1.3 3.6-3M20 7h-2.5c-1.6 0-2.7 1.3-3.6 3"/><path d="M17.5 4.5L20 7l-2.5 2.5M17.5 14.5L20 17l-2.5 2.5"/></svg>
-      </button>
-      <button class="ctrl" id="wither-btn" aria-label="Hide withered vines" aria-pressed="false">
-        <svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.6"/><path class="slash" d="M4 4l16 16"/></svg>
-      </button>
-      <button class="ctrl enter" id="enter-btn">Enter</button>
-    </div>
-
-    <section class="history" id="history" aria-label="Your guesses"></section>
+    <div class="keyboard" id="keyboard" aria-label="Keyboard"></div>
 
     <footer class="foot">
       <div class="foot-links">
@@ -68,16 +58,15 @@
   <dialog class="sheet" id="help">
     <form method="dialog"><button class="close" aria-label="Close">×</button></form>
     <h2>How to play</h2>
-    <p class="lede">A word is hidden in the ring. It uses every letter on the ring, and it can use a letter more than once, so you don't know how long it is.</p>
+    <p class="lede">You get a crossword clue and a row of blanks, one per letter. Fill the blanks using six 5-letter words.</p>
     <ol class="rules">
-      <li><b>Guess a 5-letter word</b> using ring letters (repeats allowed). For each pair of neighbouring letters in your guess, a vine grows:
+      <li><b>Guess any 5-letter word.</b> Wherever two neighbouring letters in your guess also sit side by side in the answer, in that order, a vine grows up and fills them in.
         <div class="example" id="example"></div>
-        <p class="small">If the hidden word is <b>BALLOON</b>: B→A and A→L sit side by side in that order, so they grow. A→N and N→A don't, so they wither. Direction matters, and a doubled letter like LL grows a loop.</p>
+        <p class="small">If the answer is <b>PLANTER</b>, SLANT grows L→A, A→N and N→T, filling in L, A, N and T. S→L withers, because SL isn't in PLANTER.</p>
       </li>
-      <li><b>Guess the word</b> whenever you think you have it: any word longer than 5 letters that uses every ring letter. It only tells you right or wrong.</li>
-      <li><b>You have 6 guesses in total</b>, shared by both kinds. Your last one has to be a guess at the word.</li>
+      <li><b>Fill every blank within six guesses</b> to win. The clue tells you what you're aiming for, so choose words that contain the pairs you need.</li>
     </ol>
-    <p class="small">A new puzzle every day.</p>
+    <p class="small">A new puzzle every day. Clues come from past New York Times crosswords.</p>
     <form method="dialog"><button class="primary" autofocus>Start growing</button></form>
   </dialog>
 
@@ -94,6 +83,6 @@
     </div>
   </dialog>
 
-  <script src="game.js?v=4"></script>
+  <script src="game.js?v=5"></script>
 </body>
 </html>
