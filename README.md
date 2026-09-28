@@ -16,7 +16,7 @@ turns yellow and drops into the leftmost such blank; each blank takes one
 letter, so repeats and letters already filled in aren't yellow. Yellow letters
 are only hints: you win once every blank has been turned green by a vine.
 Every puzzle can be finished in two guesses at best (16 in just one); the best
-is shown after the game. On the keyboard,
+is shown after the game, both in the result popup and under the board. On the keyboard,
 guessed letters turn green if they're in the answer and grey if not. Fill every blank
 within six guesses to win.
 

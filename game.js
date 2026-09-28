@@ -113,6 +113,7 @@
     renderAnswer(arrivals);
     renderGrid();
     renderKeyboard();
+    renderPar();
     $('practice-btn').textContent = practice === null ? 'Practice puzzle' : 'New practice puzzle';
     $('today-btn').hidden = practice === null;
   }
@@ -197,6 +198,26 @@
       key.classList.toggle('hit', guessed && game.answer.includes(k));
       key.classList.toggle('absent', guessed && !game.answer.includes(k));
     });
+  }
+
+  // The fewest guesses that finish this puzzle, as tiles with their vine
+  // letters in green. Shown only once the game is over.
+  function parHTML() {
+    const { rows } = progress(game.solution);
+    const words = game.solution.map((word, r) => {
+      let tiles = '';
+      for (let j = 0; j < 5; j++) {
+        if (j) tiles += linkHTML(word, j - 1);
+        tiles += `<span class="tile ${rows[r].states[j] === 'vined' ? 'vined' : ''}">${word[j]}</span>`;
+      }
+      return `<div class="row mini">${tiles}</div>`;
+    }).join('<span class="par-plus">+</span>');
+    const label = game.par === 1 ? 'Possible in just one word' : 'Possible in two words';
+    return `<div class="par"><p class="par-label">${label}</p><div class="par-words">${words}</div></div>`;
+  }
+
+  function renderPar() {
+    $('par').innerHTML = game.status === 'playing' ? '' : parHTML();
   }
 
   // ---------- vines ----------
@@ -331,6 +352,7 @@
       const landed = Math.max(0.9, ...arrivals.values()) + 0.6;
       setTimeout(() => {
         renderGrid();
+        renderPar();
         renderAnswer(new Map(), true);
         requestAnimationFrame(() => drawVines());
       }, landed * 1000);
@@ -362,7 +384,7 @@
     const s = store.get(STATS_KEY, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
     const over = game.status !== 'playing';
     const clue = `<p class="result-clue">${escapeHTML(game.clue)}</p>`;
-    const best = `<p class="result-par">Fewest possible: ${game.par} guess${game.par > 1 ? 'es' : ''}, e.g. ${game.solution.map(w => w.toUpperCase()).join(' + ')}</p>`;
+    const best = parHTML();
     let result = '';
     if (game.status === 'won') {
       const n = game.guesses.length;
@@ -512,7 +534,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=12');
+    const res = await fetch('data/vines.json?v=13');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
