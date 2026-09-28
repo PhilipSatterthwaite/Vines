@@ -1,12 +1,12 @@
-// Builds data/vines.json: the guess dictionaries and every puzzle for each mode.
+// Builds data/vines.json: the guess dictionaries and the daily puzzles.
 //
 //   node scripts/build.mjs
 //
 // Guesses are checked against ENABLE (downloaded once into scripts/.cache).
-// Answers come from scripts/targets.txt: common 6- to 9-letter words with no
-// repeated letter. Each mode adds 0, 1 or 2 decoy letters to the ring, picked
-// so the decoys turn up in plenty of 5-letter words (so they aren't obvious)
-// and, where possible, leave other words of the answer's length on the ring.
+// Answers come from scripts/targets.txt: common 6- to 9-letter words, repeated
+// letters allowed. The ring is just the answer's distinct letters, so it says
+// nothing about the length. Rings with too few 5-letter words to guess are
+// skipped.
 
 import fs from 'fs';
 import path from 'path';
@@ -25,8 +25,8 @@ if (!fs.existsSync(enablePath)) {
 
 const enable = fs.readFileSync(enablePath, 'utf8').split(/\r?\n/).filter(w => /^[a-z]+$/.test(w));
 const five = enable.filter(w => w.length === 5);
-// Answer guesses: any 6- to 9-letter word with no repeated letter.
-const long = enable.filter(w => w.length >= 6 && w.length <= 9 && new Set(w).size === w.length);
+// Answer guesses: longer words that could fit on a ring (at most 9 different letters).
+const long = enable.filter(w => w.length >= 6 && w.length <= 12 && new Set(w).size <= 9);
 const targets = fs.readFileSync(path.join(here, 'targets.txt'), 'utf8').split(/\r?\n/).filter(Boolean);
 
 function rng(seed) {
@@ -43,44 +43,19 @@ const shuffle = (arr, rand) => {
   return a;
 };
 
-const spellable = (w, set) => { for (const c of w) if (!set.has(c)) return false; return true; };
-const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-
-function pickDecoys(target, count, rand) {
-  if (count === 0) return [];
-  const own = new Set(target);
-  const spare = [...alphabet].filter(c => !own.has(c) && !'jqxz'.includes(c));
-  const combos = count === 1 ? spare.map(c => [c]) : spare.flatMap((a, i) => spare.slice(i + 1).map(b => [a, b]));
-  const scored = [];
-  for (const d of combos) {
-    const ring = new Set([...own, ...d]);
-    const probes = five.filter(w => spellable(w, ring));
-    // Each decoy has to appear in several playable words.
-    const perDecoy = d.map(c => probes.filter(w => w.includes(c)).length);
-    if (Math.min(...perDecoy) < 6) continue;
-    const answers = long.filter(w => w.length === target.length && spellable(w, ring)).length;
-    scored.push({ d, score: Math.min(...perDecoy) + 4 * Math.min(answers, 12) });
-  }
-  if (!scored.length) return null;
-  scored.sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, Math.max(3, Math.ceil(scored.length / 4)));
-  return top[rand() * top.length | 0].d;
-}
-
-const modes = { sprout: 0, vine: 1, thicket: 2 };
-const puzzles = {};
-for (const [mode, decoys] of Object.entries(modes)) {
-  const rand = rng(20260927 + decoys * 7919);
-  puzzles[mode] = [];
-  for (const target of shuffle(targets, rand)) {
-    const d = pickDecoys(target, decoys, rand);
-    if (d === null) continue;
-    const ring = shuffle([...target, ...d], rand).join('');
-    // The answer is stored as positions on the ring, so it isn't sitting in plain text.
-    const key = [...target].map(c => ring.indexOf(c).toString(36)).join('');
-    puzzles[mode].push(`${ring}:${key}`);
-  }
-  console.log(mode, puzzles[mode].length, 'puzzles');
+const MIN_PROBES = 12;
+const rand = rng(20260928);
+const puzzles = [];
+let skipped = 0;
+for (const target of shuffle(targets, rand)) {
+  const letters = [...new Set(target)];
+  const set = new Set(letters);
+  const probes = five.filter(w => [...w].every(c => set.has(c))).length;
+  if (probes < MIN_PROBES) { skipped++; continue; }
+  const ring = shuffle(letters, rand).join('');
+  // The answer is stored as positions on the ring, so it isn't sitting in plain text.
+  const key = [...target].map(c => ring.indexOf(c)).join('');
+  puzzles.push(`${ring}:${key}`);
 }
 
 fs.writeFileSync(path.join(root, 'data', 'vines.json'), JSON.stringify({
@@ -88,4 +63,4 @@ fs.writeFileSync(path.join(root, 'data', 'vines.json'), JSON.stringify({
   long: long.join(' '),
   puzzles,
 }));
-console.log('five', five.length, 'long', long.length);
+console.log('puzzles', puzzles.length, 'skipped', skipped, '| five', five.length, 'long', long.length);

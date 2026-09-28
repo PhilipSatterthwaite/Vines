@@ -1,7 +1,7 @@
 (() => {
   const MAX_GUESSES = 6;
+  const MAX_LENGTH = 12;
   const EPOCH = new Date(2026, 8, 27); // puzzle #1
-  const MODE_NAMES = { sprout: 'Sprout', vine: 'Vine', thicket: 'Thicket' };
   const NS = 'http://www.w3.org/2000/svg';
   const LEAF = 'M0 0C3-5 9-6.5 14-4.5C10.5 1 5 3 0 0Z';
   const TIP = 'M3 0L-7-5.5Q-4 0-7 5.5Z';
@@ -17,15 +17,12 @@
   };
 
   let data, FIVE, LONG;
-  let mode = store.get('vines:mode', 'sprout');
-  if (!MODE_NAMES[mode]) mode = 'sprout';
   let practice = null;     // puzzle index while practising, null for the daily
   let game;
   let entry = [];
   let fresh = new Set();   // links discovered by the latest guess, to animate
   let hideDead = store.get('vines:hideDead', false);
   let geom;                // letter -> {x, y, angle}
-  let nodeEls = {};
 
   function dayIndex(date = new Date()) {
     const midnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -34,26 +31,25 @@
 
   function decode(puzzle) {
     const [ring, key] = puzzle.split(':');
-    return { ring, target: [...key].map(c => ring[parseInt(c, 36)]).join('') };
+    return { ring, target: [...key].map(c => ring[+c]).join('') };
   }
 
-  function dailyKey(m, day) { return `vines:day:${m}:${day}`; }
+  const dailyKey = day => `vines:daily:${day}`;
 
   // ---------- game state ----------
 
   function load() {
-    const list = data.puzzles[mode];
+    const list = data.puzzles;
     const day = dayIndex();
     const idx = practice ?? ((day % list.length) + list.length) % list.length;
     const { ring, target } = decode(list[idx]);
-    const saved = practice === null ? store.get(dailyKey(mode, day), null) : null;
+    const saved = practice === null ? store.get(dailyKey(day), null) : null;
     const ok = saved && saved.ring === ring;
     game = {
       ring, target, day,
       order: ok && saved.order ? saved.order : shuffle([...ring]),
       guesses: ok ? saved.guesses : [],
       status: ok ? saved.status : 'playing',
-      struck: ok ? saved.struck : [],
       counted: ok ? !!saved.counted : false,
     };
     entry = [];
@@ -64,18 +60,17 @@
 
   function save() {
     if (practice !== null) return;
-    const { ring, order, guesses, status, struck, counted } = game;
-    store.set(dailyKey(mode, game.day), { ring, order, guesses, status, struck, counted });
+    const { ring, order, guesses, status, counted } = game;
+    store.set(dailyKey(game.day), { ring, order, guesses, status, counted });
   }
+
+  const pairsOf = w => Array.from({ length: w.length - 1 }, (_, i) => w[i] + w[i + 1]);
 
   function links(guesses = game.guesses) {
     const map = new Map();
     for (const g of guesses) {
       if (g.length !== 5) continue;
-      for (let i = 0; i < 4; i++) {
-        const pair = g[i] + g[i + 1];
-        map.set(pair, game.target.includes(pair));
-      }
+      for (const pair of pairsOf(g)) map.set(pair, game.target.includes(pair));
     }
     return map;
   }
@@ -102,11 +97,12 @@
     svg.innerHTML = '';
     svg.classList.toggle('hide-dead', hideDead);
     const n = game.order.length;
-    const R = [138, 142, 148, 152, 154, 156][Math.min(Math.max(n - 6, 0), 5)];
-    const r = [30, 29, 28, 27, 25, 23][Math.min(Math.max(n - 6, 0), 5)];
+    const i = Math.min(Math.max(n - 5, 0), 4);
+    const R = [118, 126, 132, 136, 138][i];
+    const r = [34, 32, 30, 29, 27][i];
     geom = { r, R, pos: {} };
-    game.order.forEach((letter, i) => {
-      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    game.order.forEach((letter, k) => {
+      const angle = -Math.PI / 2 + (k * 2 * Math.PI) / n;
       geom.pos[letter] = { x: 200 + R * Math.cos(angle), y: 200 + R * Math.sin(angle), angle };
     });
 
@@ -117,46 +113,29 @@
     const nodes = el('g', { id: 'nodes' }, svg);
     el('g', { id: 'flowers' }, svg);
 
-    nodeEls = {};
     for (const letter of game.order) {
       const { x, y } = geom.pos[letter];
-      const g = el('g', { class: 'node', transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})`, role: 'button', 'aria-label': letter.toUpperCase() }, nodes);
+      const g = el('g', { class: 'node', 'data-letter': letter, transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})`, role: 'button', 'aria-label': letter.toUpperCase() }, nodes);
       el('circle', { r }, g);
-      const t = el('text', { y: 1 }, g);
-      t.textContent = letter;
-      const s = r * 0.55;
-      el('line', { class: 'strike', x1: -s, y1: s, x2: s, y2: -s }, g);
-      attachPress(g, letter);
-      nodeEls[letter] = g;
+      el('text', { y: 1 }, g).textContent = letter;
+      g.addEventListener('pointerdown', () => g.classList.add('pressed'));
+      const release = () => g.classList.remove('pressed');
+      g.addEventListener('pointerleave', release);
+      g.addEventListener('pointercancel', release);
+      g.addEventListener('pointerup', () => { release(); type(letter); });
     }
     drawVines();
   }
 
-  function attachPress(g, letter) {
-    let timer = null;
-    let long = false;
-    g.addEventListener('pointerdown', e => {
-      if (e.button === 2) return;
-      long = false;
-      g.classList.add('pressed');
-      timer = setTimeout(() => { long = true; toggleStrike(letter); }, 450);
-    });
-    const cancel = () => { clearTimeout(timer); g.classList.remove('pressed'); };
-    g.addEventListener('pointerup', e => {
-      cancel();
-      if (e.button === 2 || long) return;
-      type(letter);
-    });
-    g.addEventListener('pointerleave', cancel);
-    g.addEventListener('pointercancel', cancel);
-    g.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      if (!long) toggleStrike(letter);
-    });
-  }
-
+  // Every vine is a cubic Bézier {p0, c1, c2, p3}.
   function curve(a, b) {
     const pa = geom.pos[a], pb = geom.pos[b];
+    if (a === b) {
+      // A doubled letter: a loop out from the letter and back into it.
+      const { angle } = pa;
+      const on = (da, dist) => ({ x: pa.x + dist * Math.cos(angle + da), y: pa.y + dist * Math.sin(angle + da) });
+      return { p0: on(-0.45, geom.r + 2), c1: on(-0.8, geom.r + 56), c2: on(0.8, geom.r + 56), p3: on(0.45, geom.r + 5) };
+    }
     const dx = pb.x - pa.x, dy = pb.y - pa.y;
     const d = Math.hypot(dx, dy);
     // Bend to the left of the direction of travel, so A→B and B→A never overlap.
@@ -171,21 +150,24 @@
       const vx = c.x - p.x, vy = c.y - p.y, l = Math.hypot(vx, vy);
       return { x: p.x + (vx / l) * dist, y: p.y + (vy / l) * dist };
     };
-    return { p0: trim(pa, geom.r + 3), c, p2: trim(pb, geom.r + 6) };
+    const p0 = trim(pa, geom.r + 3), p3 = trim(pb, geom.r + 6);
+    const lerp = (p, t) => ({ x: p.x + (c.x - p.x) * t, y: p.y + (c.y - p.y) * t });
+    return { p0, c1: lerp(p0, 2 / 3), c2: lerp(p3, 2 / 3), p3 };
   }
-  const at = (q, t) => ({
-    x: (1 - t) ** 2 * q.p0.x + 2 * (1 - t) * t * q.c.x + t * t * q.p2.x,
-    y: (1 - t) ** 2 * q.p0.y + 2 * (1 - t) * t * q.c.y + t * t * q.p2.y,
-  });
-  const heading = (q, t) => {
-    const x = 2 * (1 - t) * (q.c.x - q.p0.x) + 2 * t * (q.p2.x - q.c.x);
-    const y = 2 * (1 - t) * (q.c.y - q.p0.y) + 2 * t * (q.p2.y - q.c.y);
-    return (Math.atan2(y, x) * 180) / Math.PI;
+  const at = (q, t) => {
+    const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    return { x: a * q.p0.x + b * q.c1.x + c * q.c2.x + d * q.p3.x, y: a * q.p0.y + b * q.c1.y + c * q.c2.y + d * q.p3.y };
   };
-  const pathD = q => `M${q.p0.x.toFixed(1)} ${q.p0.y.toFixed(1)}Q${q.c.x.toFixed(1)} ${q.c.y.toFixed(1)} ${q.p2.x.toFixed(1)} ${q.p2.y.toFixed(1)}`;
+  const heading = (q, t) => {
+    const u = 1 - t;
+    const f = k => 3 * u * u * (q.c1[k] - q.p0[k]) + 6 * u * t * (q.c2[k] - q.c1[k]) + 3 * t * t * (q.p3[k] - q.c2[k]);
+    return (Math.atan2(f('y'), f('x')) * 180) / Math.PI;
+  };
+  const fmt = p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  const pathD = q => `M${fmt(q.p0)}C${fmt(q.c1)} ${fmt(q.c2)} ${fmt(q.p3)}`;
   const place = (q, t, turn = 0, scale = 1) => {
     const p = at(q, t);
-    return `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(heading(q, t) + turn).toFixed(1)}) scale(${scale})`;
+    return `translate(${fmt(p)}) rotate(${(heading(q, t) + turn).toFixed(1)}) scale(${scale})`;
   };
 
   function drawVine(parent, a, b, kind, delay = 0, animate = false) {
@@ -214,7 +196,6 @@
     dead.innerHTML = live.innerHTML = answer.innerHTML = flowers.innerHTML = '';
     let i = 0;
     for (const [pair, alive] of links()) {
-      if (pair[0] === pair[1]) continue;
       const animate = fresh.has(pair);
       drawVine(alive ? live : dead, pair[0], pair[1], alive ? 'live' : 'dead', animate ? 0.15 * i++ : 0, animate);
     }
@@ -222,13 +203,13 @@
   }
 
   function drawAnswer() {
-    const t = game.target;
     const animate = fresh.has('*answer');
-    for (let i = 0; i < t.length - 1; i++) drawVine($('answer-vines'), t[i], t[i + 1], 'answer', 0.3 + i * 0.28, animate);
+    [...new Set(pairsOf(game.target))].forEach((pair, i) =>
+      drawVine($('answer-vines'), pair[0], pair[1], 'answer', 0.3 + i * 0.28, animate));
     if (game.status !== 'won') return;
-    [...t].forEach((letter, i) => {
-      const { x, y, angle } = geom.pos[letter];
-      const d = geom.R + geom.r - 3;
+    game.order.forEach((letter, i) => {
+      const { angle } = geom.pos[letter];
+      const d = geom.R - geom.r + 3;
       const f = el('g', { class: 'flower', transform: `translate(${(200 + d * Math.cos(angle)).toFixed(1)} ${(200 + d * Math.sin(angle)).toFixed(1)})` }, $('flowers'));
       if (animate) f.style.animationDelay = `${2 + i * 0.12}s`;
       for (let p = 0; p < 5; p++) {
@@ -241,17 +222,16 @@
 
   function updateNodes() {
     const over = game.status !== 'playing';
-    for (const [letter, g] of Object.entries(nodeEls)) {
-      g.classList.toggle('active', !over && entry.includes(letter));
-      g.classList.toggle('struck', game.struck.includes(letter) && !(over && game.target.includes(letter)));
-      g.classList.toggle('bloom', over && game.target.includes(letter));
-    }
+    document.querySelectorAll('#nodes .node').forEach(g => {
+      g.classList.toggle('active', !over && entry.includes(g.dataset.letter));
+      g.classList.toggle('bloom', over);
+    });
   }
 
   // ---------- input ----------
 
   function type(letter) {
-    if (game.status !== 'playing' || entry.length >= game.target.length) return;
+    if (game.status !== 'playing' || entry.length >= MAX_LENGTH) return;
     entry.push(letter);
     renderEntry(true);
     updateNodes();
@@ -261,14 +241,6 @@
     if (!entry.length) return;
     entry.pop();
     renderEntry();
-    updateNodes();
-  }
-
-  function toggleStrike(letter) {
-    if (game.status !== 'playing') return;
-    const i = game.struck.indexOf(letter);
-    if (i >= 0) game.struck.splice(i, 1); else game.struck.push(letter);
-    save();
     updateNodes();
   }
 
@@ -283,21 +255,20 @@
   function submit() {
     if (game.status !== 'playing') return;
     const word = entry.join('');
-    const size = game.target.length;
     const left = MAX_GUESSES - game.guesses.length;
 
     if (word.length === 5) {
-      if (left === 1) return reject(`Last guess: it has to be the ${size}-letter word`);
+      if (left === 1) return reject('Last guess: it has to be the word itself');
       if (game.guesses.includes(word)) return reject('Already grown');
       if (!FIVE.has(word)) return reject('Not in the word list');
       const before = links();
       game.guesses.push(word);
       const after = links();
-      fresh = new Set([...after.keys()].filter(p => !before.has(p) && p[0] !== p[1]));
+      fresh = new Set([...after.keys()].filter(p => !before.has(p)));
       const grew = [...fresh].filter(p => after.get(p)).length;
       toast(grew ? `${grew} new vine${grew > 1 ? 's' : ''} grew` : fresh.size ? 'Nothing new grew' : 'No new pairs there');
-    } else if (word.length === size) {
-      if (new Set(word).size < size) return reject('Every letter in the word is different');
+    } else if (word.length > 5) {
+      if (game.order.some(c => !word.includes(c))) return reject('The word uses every letter on the ring');
       if (game.guesses.includes(word)) return reject('Already tried that one');
       if (!LONG.has(word)) return reject('Not in the word list');
       game.guesses.push(word);
@@ -305,10 +276,8 @@
       if (word === game.target) game.status = 'won';
       else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
       else toast('Not it');
-    } else if (word.length > 5) {
-      return reject(`The word is ${size} letters long`);
     } else {
-      return reject(`5 letters to grow vines, ${size} to answer`);
+      return reject('5 letters grow vines · longer words guess the answer');
     }
 
     entry = [];
@@ -319,14 +288,13 @@
     save();
     drawVines();
     renderAll();
-    if (game.status !== 'playing') setTimeout(() => openStats(), 2600);
+    if (game.status !== 'playing') setTimeout(() => openStats(), 2800);
   }
 
   function finish() {
     if (practice !== null || game.counted) return;
     game.counted = true;
-    const key = `vines:stats:${mode}`;
-    const s = store.get(key, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null });
+    const s = store.get('vines:stats', { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0], last: null });
     s.played++;
     if (game.status === 'won') {
       s.won++;
@@ -338,13 +306,12 @@
       s.streak = 0;
       s.last = null;
     }
-    store.set(key, s);
+    store.set('vines:stats', s);
   }
 
   // ---------- rendering ----------
 
   function renderAll() {
-    renderModes();
     renderStatus();
     renderEntry();
     renderHistory();
@@ -355,56 +322,45 @@
     $('enter-btn').disabled = game.status !== 'playing';
   }
 
-  function renderModes() {
-    const day = dayIndex();
-    document.querySelectorAll('.modes button').forEach(b => {
-      const m = b.dataset.mode;
-      b.setAttribute('aria-selected', m === mode);
-      const saved = store.get(dailyKey(m, day), null);
-      b.querySelector('.mode-name').className = 'mode-name' + (saved?.status === 'won' ? ' done' : saved?.status === 'lost' ? ' failed' : '');
-    });
-  }
-
   function leafIcon(used) {
     return `<svg viewBox="0 0 32 32" class="${used ? 'used' : ''}"><path d="M6 26C10 14 18 8 27 6c-2 9-8 17-20 20z"/><path class="vein" d="M6 26C12 20 17 15 22 11"/></svg>`;
   }
 
   function renderStatus() {
-    $('puzzle-label').innerHTML = practice === null
-      ? `<b>${MODE_NAMES[mode]}</b> · #${game.day + 1} · ${game.target.length} letters`
-      : `<b>Practice</b> · ${MODE_NAMES[mode]} · ${game.target.length} letters`;
+    $('puzzle-label').innerHTML = practice === null ? `<b>Puzzle #${game.day + 1}</b>` : '<b>Practice</b>';
     const used = game.guesses.length;
     $('budget').innerHTML = Array.from({ length: MAX_GUESSES }, (_, i) => leafIcon(i < used)).join('');
     $('budget').setAttribute('aria-label', `${MAX_GUESSES - used} guesses left`);
   }
 
-  function connector(a, b, known, cls = '') {
-    if (!a || !b) return `<span class="link ${cls}"></span>`;
+  function connector(a, b, known) {
+    if (!a || !b) return '<span class="link"></span>';
     const state = known.get(a + b);
-    return `<span class="link ${cls} ${state === true ? 'live' : state === false ? 'dead' : ''}"></span>`;
+    return `<span class="link ${state === true ? 'live' : state === false ? 'dead' : ''}"></span>`;
   }
 
   function renderEntry(popLast = false) {
     const known = links();
-    const size = game.target.length;
+    const slots = Math.max(5, entry.length);
     let html = '';
-    for (let i = 0; i < size; i++) {
-      if (i > 0) html += connector(entry[i - 1], entry[i], known, i === 5 ? 'gap' : '');
+    for (let i = 0; i < slots; i++) {
+      if (i > 0) html += connector(entry[i - 1], entry[i], known);
       const filled = i < entry.length;
       const pop = popLast && i === entry.length - 1 ? ' pop-in' : '';
       html += `<span class="slot${i >= 5 ? ' answer-slot' : ''}${filled ? ' filled' + pop : ''}">${filled ? entry[i] : ''}</span>`;
     }
-    $('entry').innerHTML = html;
-    $('entry').style.setProperty('--n', size);
+    const e = $('entry');
+    e.innerHTML = html;
+    e.style.setProperty('--n', Math.max(7, slots));
 
     const left = MAX_GUESSES - game.guesses.length;
     let hint;
     if (game.status === 'won') hint = 'Solved. Come back tomorrow for a new one.';
     else if (game.status === 'lost') hint = `The word was ${game.target.toUpperCase()}.`;
-    else if (left === 1) hint = `Last guess: it has to be the ${size}-letter word`;
+    else if (left === 1) hint = 'Last guess: it has to be the word itself';
     else if (entry.length === 5) hint = 'Enter to grow vines';
-    else if (entry.length === size) hint = 'Enter to guess the word';
-    else hint = `5 letters grow vines · ${size} letters to answer`;
+    else if (entry.length > 5) hint = 'Enter to guess the word';
+    else hint = '5 letters grow vines · longer words guess the answer';
     $('entry-hint').textContent = hint;
   }
 
@@ -422,7 +378,7 @@
       if (j) tiles += '<span class="link"></span>';
       tiles += `<span class="tile">${word[j]}</span>`;
     }
-    return `<div class="row answer${win ? ' win' : ''}" style="--n:${word.length}"><span class="num">${i + 1}</span>${tiles}<span class="end">${win ? '✿' : '✗'}</span></div>`;
+    return `<div class="row answer${win ? ' win' : ''}" style="--n:${Math.max(7, word.length)}"><span class="num">${i + 1}</span>${tiles}<span class="end">${win ? '✿' : '✗'}</span></div>`;
   }
 
   function renderHistory() {
@@ -435,7 +391,7 @@
   // ---------- stats & sharing ----------
 
   function openStats() {
-    const s = store.get(`vines:stats:${mode}`, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
+    const s = store.get('vines:stats', { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
     const over = game.status !== 'playing';
     const vines = [...links().values()].filter(Boolean).length;
     let result = '';
@@ -447,7 +403,6 @@
       result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.target}</div></div>`;
     }
     $('result').innerHTML = result;
-    $('stats-title').textContent = `${MODE_NAMES[mode]} statistics`;
     const pct = s.played ? Math.round((100 * s.won) / s.played) : 0;
     $('stat-row').innerHTML = [[s.played, 'Played'], [pct, 'Win %'], [s.streak, 'Streak'], [s.best, 'Best']]
       .map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('');
@@ -475,12 +430,10 @@
 
   function shareText() {
     const score = game.status === 'won' ? game.guesses.length : 'X';
-    const title = practice === null ? `Vines · ${MODE_NAMES[mode]} #${game.day + 1}` : `Vines · ${MODE_NAMES[mode]} practice`;
+    const title = practice === null ? `Vines #${game.day + 1}` : 'Vines practice';
     const lines = game.guesses.map(w => {
       if (w.length !== 5) return w === game.target ? '🌸' : '❌';
-      let s = '';
-      for (let i = 0; i < 4; i++) s += game.target.includes(w[i] + w[i + 1]) ? '🟩' : '🟫';
-      return s;
+      return pairsOf(w).map(p => game.target.includes(p) ? '🟩' : '🟫').join('');
     });
     return `${title} · ${score}/${MAX_GUESSES}\n${lines.join('\n')}\n${location.origin}${location.pathname}`;
   }
@@ -511,7 +464,7 @@
   // ---------- help example ----------
 
   function renderExample() {
-    const word = 'later', target = 'planter';
+    const word = 'banal', target = 'balloon';
     let html = '';
     for (let j = 0; j < 5; j++) {
       if (j) html += `<span class="link ${target.includes(word[j - 1] + word[j]) ? 'live' : 'dead'}"></span>`;
@@ -523,13 +476,6 @@
   // ---------- wiring ----------
 
   function wire() {
-    document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.mode === mode && practice === null) return;
-      mode = b.dataset.mode;
-      practice = null;
-      store.set('vines:mode', mode);
-      load();
-    }));
     $('del-btn').addEventListener('click', del);
     $('enter-btn').addEventListener('click', submit);
     $('shuffle-btn').addEventListener('click', () => {
@@ -551,7 +497,7 @@
     $('stats-btn').addEventListener('click', openStats);
     $('share-btn').addEventListener('click', share);
     $('practice-btn').addEventListener('click', () => {
-      const list = data.puzzles[mode];
+      const list = data.puzzles;
       const today = ((dayIndex() % list.length) + list.length) % list.length;
       let idx;
       do idx = Math.floor(Math.random() * list.length); while (idx === today || idx === practice);
@@ -586,13 +532,14 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=2');
+    const res = await fetch('data/vines.json?v=3');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     LONG = new Set(data.long.split(' '));
     load();
-    if (!store.get('vines:seen', false)) {
-      store.set('vines:seen', true);
+    // The rules changed, so show them again even to people who saw the old ones.
+    if (!store.get('vines:seen-v3', false)) {
+      store.set('vines:seen-v3', true);
       $('help').showModal();
     }
   }
