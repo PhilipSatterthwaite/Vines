@@ -82,16 +82,16 @@
 
   const pairLive = (guess, j) => game.answer.includes(guess[j] + guess[j + 1]);
   // How each tile of a guess is coloured: 'vined' if it's part of a pair that
-  // grew a vine, 'present' if the letter is in the answer but grew no vine, or
-  // ''. Like Wordle, each letter in the answer accounts for one coloured tile at
-  // most: vined tiles use up their letters first, and yellow gets what's left,
-  // left to right.
-  function tileStates(guess, answer = game.answer) {
+  // grew a vine, 'present' (yellow) if its letter belongs in a blank that's
+  // still unfilled once this guess's vines have grown, or ''. Each unfilled
+  // blank turns at most one tile yellow, left to right, so a letter the answer
+  // has once never shows up yellow twice, and a letter already filled in
+  // doesn't show up yellow at all.
+  function tileStates(guess, answer = game.answer, shown = new Set()) {
     const live = j => j >= 0 && j < 4 && answer.includes(guess[j] + guess[j + 1]);
     const states = [...guess].map((_, j) => live(j - 1) || live(j) ? 'vined' : '');
     const left = {};
-    for (const c of answer) left[c] = (left[c] || 0) + 1;
-    states.forEach((st, j) => { if (st) left[guess[j]]--; });
+    [...answer].forEach((c, i) => { if (!shown.has(i)) left[c] = (left[c] || 0) + 1; });
     states.forEach((st, j) => {
       if (!st && left[guess[j]] > 0) { states[j] = 'present'; left[guess[j]]--; }
     });
@@ -151,7 +151,7 @@
       const guess = game.guesses[r];
       if (guess) {
         let row = '';
-        const states = tileStates(guess);
+        const states = tileStates(guess, game.answer, revealed(game.guesses.slice(0, r + 1)));
         for (let j = 0; j < 5; j++) {
           if (j) row += linkHTML(guess, j - 1);
           row += `<span class="tile ${states[j]}">${guess[j]}</span>`;
@@ -496,7 +496,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=9');
+    const res = await fetch('data/vines.json?v=10');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;

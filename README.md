@@ -11,9 +11,9 @@ Guess any 5-letter word, using the whole alphabet. Wherever two neighbouring
 letters in your guess also sit side by side in the answer, in that order, a
 vine grows from those two tiles up to their place in the answer and fills them
 in (every place, if the pair turns up more than once); those guess letters
-turn green. A guessed letter that is in the answer but isn't part of any vine
-turns yellow, counting repeats like Wordle: each letter in the answer colours
-one tile at most, green ones first. On the keyboard,
+turn green. Other guessed letters turn yellow if they belong in a blank that's
+still unfilled after that guess; each unfilled blank colours one tile at most,
+so repeated letters and letters already filled in aren't yellow. On the keyboard,
 guessed letters turn green if they're in the answer and grey if not. Fill every blank
 within six guesses to win.
 
