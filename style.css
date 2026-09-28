@@ -15,6 +15,9 @@
   --tile-ring: #cdbf9f;
   --bloom: #e07a5f;
   --gold: #d9a441;
+  --present: #f1d27a;
+  --present-ring: #d9a441;
+  --on-present: #3a2e08;
   --shadow: 0 1px 2px rgb(60 50 20 / .08), 0 6px 18px rgb(60 50 20 / .08);
   color-scheme: light;
 }
@@ -37,6 +40,9 @@
     --tile-ring: #475440;
     --bloom: #f0906f;
     --gold: #e6b75a;
+    --present: #c9a13f;
+    --present-ring: #e6b75a;
+    --on-present: #1d1703;
     --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .3);
     color-scheme: dark;
   }
@@ -58,6 +64,9 @@
   --tile-ring: #475440;
   --bloom: #f0906f;
   --gold: #e6b75a;
+  --present: #c9a13f;
+  --present-ring: #e6b75a;
+  --on-present: #1d1703;
   --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .3);
   color-scheme: dark;
 }
@@ -169,6 +178,7 @@ svg { display: block; }
   font-family: "Fraunces", Georgia, serif; font-weight: 700;
   text-transform: uppercase;
 }
+.tile.present { background: var(--present); border-color: var(--present-ring); color: var(--on-present); }
 .link { width: 12px; height: 4px; border-radius: 2px; flex-shrink: 0; }
 .link.live { background: var(--leaf); height: 5px; }
 .link.dead { background: repeating-linear-gradient(90deg, var(--dead) 0 3px, transparent 3px 6px); height: 2px; }

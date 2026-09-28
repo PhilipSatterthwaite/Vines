@@ -74,6 +74,11 @@
   }
 
   const pairLive = (guess, j) => game.answer.includes(guess[j] + guess[j + 1]);
+  // A letter that's in the answer but isn't part of any vine from this guess.
+  const present = (guess, j, answer = game.answer) =>
+    answer.includes(guess[j]) &&
+    !(j > 0 && answer.includes(guess[j - 1] + guess[j])) &&
+    !(j < 4 && answer.includes(guess[j] + guess[j + 1]));
 
   // ---------- rendering ----------
 
@@ -129,7 +134,7 @@
         let row = '';
         for (let j = 0; j < 5; j++) {
           if (j) row += linkHTML(guess, j - 1);
-          row += `<span class="tile">${guess[j]}</span>`;
+          row += `<span class="tile${present(guess, j) ? ' present' : ''}">${guess[j]}</span>`;
         }
         html += `<div class="row done" data-row="${r}">${row}</div>`;
       } else if (r === game.guesses.length && game.status === 'playing') {
@@ -379,14 +384,18 @@
   // ---------- help example ----------
 
   function renderExample() {
-    const answer = 'planter', guess = 'slant';
+    const answer = 'planter';
     const top = [...answer].map((c, i) => i >= 1 && i <= 4 ? `<span class="tile filled">${c}</span>` : '<span class="tile"></span>').join('');
-    let row = '';
-    for (let j = 0; j < 5; j++) {
-      if (j) row += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
-      row += `<span class="tile">${guess[j]}</span>`;
-    }
-    $('example').innerHTML = `<div class="answer">${top}</div><div class="arrow">↑ grown from</div><div class="row">${row}</div>`;
+    const row = guess => {
+      let html = '';
+      for (let j = 0; j < 5; j++) {
+        if (j) html += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
+        html += `<span class="tile${present(guess, j, answer) ? ' present' : ''}">${guess[j]}</span>`;
+      }
+      return `<div class="row">${html}</div>`;
+    };
+    $('example').innerHTML = `<div class="answer">${top}</div><div class="arrow">↑ grown from</div>${row('slant')}`;
+    $('example-2').innerHTML = row('prone');
   }
 
   // ---------- keyboard ----------
@@ -450,7 +459,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=5');
+    const res = await fetch('data/vines.json?v=6');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
