@@ -16,7 +16,7 @@
     },
   };
 
-  let data, FIVE, SEVEN;
+  let data, FIVE, LONG;
   let mode = store.get('vines:mode', 'sprout');
   if (!MODE_NAMES[mode]) mode = 'sprout';
   let practice = null;     // puzzle index while practising, null for the daily
@@ -102,8 +102,8 @@
     svg.innerHTML = '';
     svg.classList.toggle('hide-dead', hideDead);
     const n = game.order.length;
-    const R = n === 7 ? 142 : n === 8 ? 148 : 152;
-    const r = n === 9 ? 27 : 29;
+    const R = [138, 142, 148, 152, 154, 156][Math.min(Math.max(n - 6, 0), 5)];
+    const r = [30, 29, 28, 27, 25, 23][Math.min(Math.max(n - 6, 0), 5)];
     geom = { r, R, pos: {} };
     game.order.forEach((letter, i) => {
       const angle = -Math.PI / 2 + (i * 2 * Math.PI) / n;
@@ -224,7 +224,7 @@
   function drawAnswer() {
     const t = game.target;
     const animate = fresh.has('*answer');
-    for (let i = 0; i < 6; i++) drawVine($('answer-vines'), t[i], t[i + 1], 'answer', 0.3 + i * 0.28, animate);
+    for (let i = 0; i < t.length - 1; i++) drawVine($('answer-vines'), t[i], t[i + 1], 'answer', 0.3 + i * 0.28, animate);
     if (game.status !== 'won') return;
     [...t].forEach((letter, i) => {
       const { x, y, angle } = geom.pos[letter];
@@ -251,7 +251,7 @@
   // ---------- input ----------
 
   function type(letter) {
-    if (game.status !== 'playing' || entry.length >= 7) return;
+    if (game.status !== 'playing' || entry.length >= game.target.length) return;
     entry.push(letter);
     renderEntry(true);
     updateNodes();
@@ -283,10 +283,11 @@
   function submit() {
     if (game.status !== 'playing') return;
     const word = entry.join('');
+    const size = game.target.length;
     const left = MAX_GUESSES - game.guesses.length;
 
     if (word.length === 5) {
-      if (left === 1) return reject('Last guess: it has to be the 7-letter word');
+      if (left === 1) return reject(`Last guess: it has to be the ${size}-letter word`);
       if (game.guesses.includes(word)) return reject('Already grown');
       if (!FIVE.has(word)) return reject('Not in the word list');
       const before = links();
@@ -295,17 +296,19 @@
       fresh = new Set([...after.keys()].filter(p => !before.has(p) && p[0] !== p[1]));
       const grew = [...fresh].filter(p => after.get(p)).length;
       toast(grew ? `${grew} new vine${grew > 1 ? 's' : ''} grew` : fresh.size ? 'Nothing new grew' : 'No new pairs there');
-    } else if (word.length === 7) {
-      if (new Set(word).size < 7) return reject('Every letter in the word is different');
+    } else if (word.length === size) {
+      if (new Set(word).size < size) return reject('Every letter in the word is different');
       if (game.guesses.includes(word)) return reject('Already tried that one');
-      if (!SEVEN.has(word)) return reject('Not in the word list');
+      if (!LONG.has(word)) return reject('Not in the word list');
       game.guesses.push(word);
       fresh = new Set();
       if (word === game.target) game.status = 'won';
       else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
       else toast('Not it');
+    } else if (word.length > 5) {
+      return reject(`The word is ${size} letters long`);
     } else {
-      return reject('5 letters to grow vines, 7 to answer');
+      return reject(`5 letters to grow vines, ${size} to answer`);
     }
 
     entry = [];
@@ -368,8 +371,8 @@
 
   function renderStatus() {
     $('puzzle-label').innerHTML = practice === null
-      ? `<b>${MODE_NAMES[mode]}</b> · #${game.day + 1}`
-      : `<b>Practice</b> · ${MODE_NAMES[mode]}`;
+      ? `<b>${MODE_NAMES[mode]}</b> · #${game.day + 1} · ${game.target.length} letters`
+      : `<b>Practice</b> · ${MODE_NAMES[mode]} · ${game.target.length} letters`;
     const used = game.guesses.length;
     $('budget').innerHTML = Array.from({ length: MAX_GUESSES }, (_, i) => leafIcon(i < used)).join('');
     $('budget').setAttribute('aria-label', `${MAX_GUESSES - used} guesses left`);
@@ -383,23 +386,25 @@
 
   function renderEntry(popLast = false) {
     const known = links();
+    const size = game.target.length;
     let html = '';
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < size; i++) {
       if (i > 0) html += connector(entry[i - 1], entry[i], known, i === 5 ? 'gap' : '');
       const filled = i < entry.length;
       const pop = popLast && i === entry.length - 1 ? ' pop-in' : '';
       html += `<span class="slot${i >= 5 ? ' answer-slot' : ''}${filled ? ' filled' + pop : ''}">${filled ? entry[i] : ''}</span>`;
     }
     $('entry').innerHTML = html;
+    $('entry').style.setProperty('--n', size);
 
     const left = MAX_GUESSES - game.guesses.length;
     let hint;
     if (game.status === 'won') hint = 'Solved. Come back tomorrow for a new one.';
     else if (game.status === 'lost') hint = `The word was ${game.target.toUpperCase()}.`;
-    else if (left === 1) hint = 'Last guess: it has to be the 7-letter word';
+    else if (left === 1) hint = `Last guess: it has to be the ${size}-letter word`;
     else if (entry.length === 5) hint = 'Enter to grow vines';
-    else if (entry.length === 7) hint = 'Enter to guess the word';
-    else hint = '5 letters grow vines · 7 letters to answer';
+    else if (entry.length === size) hint = 'Enter to guess the word';
+    else hint = `5 letters grow vines · ${size} letters to answer`;
     $('entry-hint').textContent = hint;
   }
 
@@ -413,11 +418,11 @@
       return `<div class="row"><span class="num">${i + 1}</span>${tiles}<span class="end"></span></div>`;
     }
     const win = word === game.target;
-    for (let j = 0; j < 7; j++) {
+    for (let j = 0; j < word.length; j++) {
       if (j) tiles += '<span class="link"></span>';
       tiles += `<span class="tile">${word[j]}</span>`;
     }
-    return `<div class="row answer${win ? ' win' : ''}"><span class="num">${i + 1}</span>${tiles}<span class="end">${win ? '✿' : '✗'}</span></div>`;
+    return `<div class="row answer${win ? ' win' : ''}" style="--n:${word.length}"><span class="num">${i + 1}</span>${tiles}<span class="end">${win ? '✿' : '✗'}</span></div>`;
   }
 
   function renderHistory() {
@@ -472,7 +477,7 @@
     const score = game.status === 'won' ? game.guesses.length : 'X';
     const title = practice === null ? `Vines · ${MODE_NAMES[mode]} #${game.day + 1}` : `Vines · ${MODE_NAMES[mode]} practice`;
     const lines = game.guesses.map(w => {
-      if (w.length === 7) return w === game.target ? '🌸' : '❌';
+      if (w.length !== 5) return w === game.target ? '🌸' : '❌';
       let s = '';
       for (let i = 0; i < 4; i++) s += game.target.includes(w[i] + w[i + 1]) ? '🟩' : '🟫';
       return s;
@@ -581,10 +586,10 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=1');
+    const res = await fetch('data/vines.json?v=2');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
-    SEVEN = new Set(data.seven.split(' '));
+    LONG = new Set(data.long.split(' '));
     load();
     if (!store.get('vines:seen', false)) {
       store.set('vines:seen', true);

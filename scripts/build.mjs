@@ -3,10 +3,10 @@
 //   node scripts/build.mjs
 //
 // Guesses are checked against ENABLE (downloaded once into scripts/.cache).
-// Answers come from scripts/targets.txt: common 7-letter words with no
+// Answers come from scripts/targets.txt: common 6- to 9-letter words with no
 // repeated letter. Each mode adds 0, 1 or 2 decoy letters to the ring, picked
 // so the decoys turn up in plenty of 5-letter words (so they aren't obvious)
-// and leave more than one 7-letter word on the ring.
+// and, where possible, leave other words of the answer's length on the ring.
 
 import fs from 'fs';
 import path from 'path';
@@ -25,7 +25,8 @@ if (!fs.existsSync(enablePath)) {
 
 const enable = fs.readFileSync(enablePath, 'utf8').split(/\r?\n/).filter(w => /^[a-z]+$/.test(w));
 const five = enable.filter(w => w.length === 5);
-const seven = enable.filter(w => w.length === 7 && new Set(w).size === 7);
+// Answer guesses: any 6- to 9-letter word with no repeated letter.
+const long = enable.filter(w => w.length >= 6 && w.length <= 9 && new Set(w).size === w.length);
 const targets = fs.readFileSync(path.join(here, 'targets.txt'), 'utf8').split(/\r?\n/).filter(Boolean);
 
 function rng(seed) {
@@ -57,8 +58,7 @@ function pickDecoys(target, count, rand) {
     // Each decoy has to appear in several playable words.
     const perDecoy = d.map(c => probes.filter(w => w.includes(c)).length);
     if (Math.min(...perDecoy) < 6) continue;
-    const answers = seven.filter(w => spellable(w, ring)).length;
-    if (answers < 2) continue;
+    const answers = long.filter(w => w.length === target.length && spellable(w, ring)).length;
     scored.push({ d, score: Math.min(...perDecoy) + 4 * Math.min(answers, 12) });
   }
   if (!scored.length) return null;
@@ -85,7 +85,7 @@ for (const [mode, decoys] of Object.entries(modes)) {
 
 fs.writeFileSync(path.join(root, 'data', 'vines.json'), JSON.stringify({
   five: five.join(' '),
-  seven: seven.join(' '),
+  long: long.join(' '),
   puzzles,
 }));
-console.log('five', five.length, 'seven', seven.length);
+console.log('five', five.length, 'long', long.length);

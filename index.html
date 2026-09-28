@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vines</title>
-  <meta name="description" content="Grow vines between letters to find the hidden seven-letter word.">
+  <meta name="description" content="Grow vines between letters to find the hidden word.">
   <meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121812" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 26C10 14 18 8 27 6c-2 9-8 17-20 20z' fill='%233f7d3a'/%3E%3Cpath d='M6 26C12 20 17 15 22 11' stroke='%23f3eee1' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500;1,9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div class="app">
@@ -29,9 +29,9 @@
     </header>
 
     <nav class="modes" role="tablist" aria-label="Difficulty">
-      <button role="tab" data-mode="sprout"><span class="mode-name">Sprout</span><span class="mode-sub">7 letters</span></button>
-      <button role="tab" data-mode="vine"><span class="mode-name">Vine</span><span class="mode-sub">8 · one decoy</span></button>
-      <button role="tab" data-mode="thicket"><span class="mode-name">Thicket</span><span class="mode-sub">9 · two decoys</span></button>
+      <button role="tab" data-mode="sprout"><span class="mode-name">Sprout</span><span class="mode-sub">no decoys</span></button>
+      <button role="tab" data-mode="vine"><span class="mode-name">Vine</span><span class="mode-sub">one decoy</span></button>
+      <button role="tab" data-mode="thicket"><span class="mode-name">Thicket</span><span class="mode-sub">two decoys</span></button>
     </nav>
 
     <div class="status-line">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="entry" id="entry" aria-live="polite"></div>
-    <p class="entry-hint" id="entry-hint">5 letters grow vines · 7 letters to answer</p>
+    <p class="entry-hint" id="entry-hint"></p>
 
     <div class="controls">
       <button class="ctrl" id="del-btn" aria-label="Delete">
@@ -75,19 +75,19 @@
   <dialog class="sheet" id="help">
     <form method="dialog"><button class="close" aria-label="Close">×</button></form>
     <h2>How to play</h2>
-    <p class="lede">A seven-letter word is hidden in the ring. Every one of its letters is different, and all of them are on the ring.</p>
+    <p class="lede">A word of 6 to 9 letters is hidden in the ring. Every one of its letters is different, and all of them are on the ring. Its length is shown above the ring.</p>
     <ol class="rules">
       <li><b>Guess a 5-letter word</b> using ring letters (repeats allowed). For each pair of neighbouring letters in your guess, a vine grows:
         <div class="example" id="example"></div>
         <p class="small">If the hidden word is <b>PLANTER</b>: L→A, T→E and E→R sit side by side in that order, so they grow. A→T doesn't, so it withers. Direction matters: T→A would wither too.</p>
       </li>
-      <li><b>Guess the 7-letter word</b> whenever you think you have it. It only tells you right or wrong.</li>
+      <li><b>Guess the whole word</b> whenever you think you have it. It only tells you right or wrong.</li>
       <li><b>You have 6 guesses in total</b>, and both kinds use one. Every word you spend on vines is one less chance to answer.</li>
     </ol>
     <div class="modes-explained">
-      <div><b>Sprout</b><span>The ring is exactly the word's seven letters.</span></div>
-      <div><b>Vine</b><span>Eight letters: one is a decoy.</span></div>
-      <div><b>Thicket</b><span>Nine letters: two are decoys.</span></div>
+      <div><b>Sprout</b><span>The ring is exactly the word's letters.</span></div>
+      <div><b>Vine</b><span>One extra letter is a decoy.</span></div>
+      <div><b>Thicket</b><span>Two extra letters are decoys.</span></div>
     </div>
     <p class="small">A new puzzle in each mode every day. Long-press or right-click a ring letter to cross it out.</p>
     <form method="dialog"><button class="primary" autofocus>Start growing</button></form>
@@ -106,6 +106,6 @@
     </div>
   </dialog>
 
-  <script src="game.js?v=1"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

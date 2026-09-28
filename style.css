@@ -190,7 +190,9 @@ svg { display: block; }
   margin-top: 6px;
 }
 .slot {
-  width: 38px; height: 44px;
+  width: min(38px, calc((100% - (var(--n, 7) - 1) * 10px) / var(--n, 7)));
+  height: 44px;
+  flex-shrink: 0;
   display: grid; place-items: center;
   border-radius: 9px;
   border: 2px dashed var(--line);
@@ -204,7 +206,7 @@ svg { display: block; }
 .link { width: 10px; height: 4px; border-radius: 2px; background: transparent; }
 .link.live { background: var(--leaf); height: 5px; }
 .link.dead { background: repeating-linear-gradient(90deg, var(--dead) 0 3px, transparent 3px 6px); height: 2px; }
-.link.gap { width: 14px; }
+.link { flex-shrink: 0; }
 .entry.shake { animation: shake .4s; }
 @keyframes shake {
   20%, 60% { transform: translateX(-7px); }
@@ -238,7 +240,9 @@ svg { display: block; }
 
 /* History */
 .history { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.row { display: flex; align-items: center; animation: rise .35s ease-out both; }
+.row { width: 100%; display: flex; justify-content: center; align-items: center; animation: rise .35s ease-out both; }
+.row.answer .tile { width: min(36px, calc((100% - 72px - (var(--n) - 1) * 4px) / var(--n))); flex-shrink: 0; }
+.row.answer .link { width: 4px; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 .row .num { width: 22px; font-size: 12px; color: var(--muted); text-align: right; margin-right: 10px; font-variant-numeric: tabular-nums; }
 .row .end { width: 32px; margin-left: 8px; font-size: 13px; }
@@ -329,8 +333,7 @@ svg { display: block; }
 .share-row .primary { flex: 1; margin: 0; }
 
 @media (max-width: 380px) {
-  .slot { width: 34px; height: 42px; font-size: 21px; }
-  .link { width: 7px; }
+  .slot { height: 42px; font-size: 21px; }
   .tile { width: 32px; height: 38px; font-size: 18px; }
   .row .link { width: 9px; }
   .brand { font-size: 30px; }
