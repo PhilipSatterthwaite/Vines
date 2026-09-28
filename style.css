@@ -160,7 +160,7 @@ svg { display: block; }
 .answer .tile.filled { background: var(--leaf); border-color: var(--leaf-deep); color: var(--on-leaf); }
 .answer .tile.arrive { animation: arrive .5s cubic-bezier(.3,1.5,.5,1) both; }
 @keyframes arrive { from { transform: scale(.6); background: var(--surface); color: transparent; } }
-.answer .tile.bloom { background: var(--bloom); border-color: var(--bloom); color: #fff; animation: bloom .6s cubic-bezier(.3,1.6,.5,1) both; }
+.answer .tile.bloom { background: var(--leaf-deep); border-color: var(--leaf-deep); color: var(--on-leaf); animation: bloom .6s cubic-bezier(.3,1.6,.5,1) both; }
 @keyframes bloom { 40% { transform: translateY(-6px) scale(1.08); } }
 .answer .tile.missed { background: var(--surface-2); border-style: dashed; color: var(--dead); }
 
@@ -269,7 +269,7 @@ svg { display: block; }
 
 .result { text-align: center; margin-bottom: 14px; }
 .result h2 { font-size: 32px; margin-bottom: 2px; }
-.result .answer-word { font: 700 26px "Fraunces", Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--bloom); }
+.result .answer-word { font: 700 26px "Fraunces", Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--leaf-deep); }
 .result p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .result .result-clue { font-style: italic; }
 .stats-title { margin: 14px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }

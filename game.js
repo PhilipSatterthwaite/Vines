@@ -67,6 +67,13 @@
     return out;
   }
 
+  // The vines each guess actually grows: a place in the answer that an earlier
+  // guess already reached doesn't get a second vine.
+  function newVines(guesses = game.guesses) {
+    const grown = new Set();
+    return guesses.map(g => matches(g).filter(({ i }) => !grown.has(i) && grown.add(i)));
+  }
+
   function revealed(guesses = game.guesses) {
     const set = new Set();
     for (const g of guesses) for (const { i } of matches(g)) { set.add(i); set.add(i + 1); }
@@ -179,12 +186,13 @@
     const answerTiles = $('answer').children;
     const rel = r => ({ left: r.left - board.left, right: r.right - board.left, top: r.top - board.top, bottom: r.bottom - board.top });
 
+    const vines = newVines();
     game.guesses.forEach((guess, r) => {
       const row = document.querySelector(`.row[data-row="${r}"]`);
       if (!row) return;
       const links = row.querySelectorAll('.link');
       const rowTop = rel(row.getBoundingClientRect()).top;
-      matches(guess).forEach(({ j, i }, k) => {
+      vines[r].forEach(({ j, i }, k) => {
         const link = rel(links[j].getBoundingClientRect());
         const a = rel(answerTiles[i].getBoundingClientRect());
         const b = rel(answerTiles[i + 1].getBoundingClientRect());
@@ -256,7 +264,8 @@
     entry = [];
     const found = matches(word);
     const arrivals = new Map();
-    found.forEach(({ i }, k) => {
+    const grown = newVines().at(-1);
+    grown.forEach(({ i }, k) => {
       const t = 0.15 * k + 0.75;
       for (const p of [i, i + 1]) if (!before.has(p) && !arrivals.has(p)) arrivals.set(p, t);
     });
@@ -266,7 +275,10 @@
 
     const newLetters = arrivals.size;
     if (game.status === 'playing') {
-      toast(newLetters ? `${newLetters} letter${newLetters > 1 ? 's' : ''} grew in` : found.length ? 'Those vines were already grown' : 'Nothing took root');
+      toast(newLetters ? `${newLetters} letter${newLetters > 1 ? 's' : ''} grew in`
+        : grown.length ? 'New vines, but no new letters'
+        : found.length ? 'Those vines were already grown'
+        : 'Nothing took root');
     }
 
     finish();
@@ -459,7 +471,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=6');
+    const res = await fetch('data/vines.json?v=7');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
