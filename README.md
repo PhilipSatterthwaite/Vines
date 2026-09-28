@@ -10,8 +10,10 @@ You're given a hard crossword clue and the answer's length (6 to 9 letters).
 Guess any 5-letter word, using the whole alphabet. Wherever two neighbouring
 letters in your guess also sit side by side in the answer, in that order, a
 vine grows from those two tiles up to their place in the answer and fills them
-in (every place, if the pair turns up more than once). A guessed letter that
-is in the answer but isn't part of any vine turns yellow. On the keyboard,
+in (every place, if the pair turns up more than once); those guess letters
+turn green. A guessed letter that is in the answer but isn't part of any vine
+turns yellow, counting repeats like Wordle: each letter in the answer colours
+one tile at most, green ones first. On the keyboard,
 guessed letters turn green if they're in the answer and grey if not. Fill every blank
 within six guesses to win.
 

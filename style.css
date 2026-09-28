@@ -178,6 +178,7 @@ svg { display: block; }
   font-family: "Fraunces", Georgia, serif; font-weight: 700;
   text-transform: uppercase;
 }
+.tile.vined { background: var(--leaf); border-color: var(--leaf-deep); color: var(--on-leaf); }
 .tile.present { background: var(--present); border-color: var(--present-ring); color: var(--on-present); }
 .link { width: 12px; height: 4px; border-radius: 2px; flex-shrink: 0; }
 .link.live { background: var(--leaf); height: 5px; }

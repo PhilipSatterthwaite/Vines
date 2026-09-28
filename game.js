@@ -81,11 +81,22 @@
   }
 
   const pairLive = (guess, j) => game.answer.includes(guess[j] + guess[j + 1]);
-  // A letter that's in the answer but isn't part of any vine from this guess.
-  const present = (guess, j, answer = game.answer) =>
-    answer.includes(guess[j]) &&
-    !(j > 0 && answer.includes(guess[j - 1] + guess[j])) &&
-    !(j < 4 && answer.includes(guess[j] + guess[j + 1]));
+  // How each tile of a guess is coloured: 'vined' if it's part of a pair that
+  // grew a vine, 'present' if the letter is in the answer but grew no vine, or
+  // ''. Like Wordle, each letter in the answer accounts for one coloured tile at
+  // most: vined tiles use up their letters first, and yellow gets what's left,
+  // left to right.
+  function tileStates(guess, answer = game.answer) {
+    const live = j => j >= 0 && j < 4 && answer.includes(guess[j] + guess[j + 1]);
+    const states = [...guess].map((_, j) => live(j - 1) || live(j) ? 'vined' : '');
+    const left = {};
+    for (const c of answer) left[c] = (left[c] || 0) + 1;
+    states.forEach((st, j) => { if (st) left[guess[j]]--; });
+    states.forEach((st, j) => {
+      if (!st && left[guess[j]] > 0) { states[j] = 'present'; left[guess[j]]--; }
+    });
+    return states;
+  }
 
   // ---------- rendering ----------
 
@@ -140,9 +151,10 @@
       const guess = game.guesses[r];
       if (guess) {
         let row = '';
+        const states = tileStates(guess);
         for (let j = 0; j < 5; j++) {
           if (j) row += linkHTML(guess, j - 1);
-          row += `<span class="tile${present(guess, j) ? ' present' : ''}">${guess[j]}</span>`;
+          row += `<span class="tile ${states[j]}">${guess[j]}</span>`;
         }
         html += `<div class="row done" data-row="${r}">${row}</div>`;
       } else if (r === game.guesses.length && game.status === 'playing') {
@@ -411,10 +423,11 @@
     const answer = 'planter';
     const top = [...answer].map((c, i) => i >= 1 && i <= 4 ? `<span class="tile filled">${c}</span>` : '<span class="tile"></span>').join('');
     const row = guess => {
+      const states = tileStates(guess, answer);
       let html = '';
       for (let j = 0; j < 5; j++) {
         if (j) html += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
-        html += `<span class="tile${present(guess, j, answer) ? ' present' : ''}">${guess[j]}</span>`;
+        html += `<span class="tile ${states[j]}">${guess[j]}</span>`;
       }
       return `<div class="row">${html}</div>`;
     };
@@ -483,7 +496,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=8');
+    const res = await fetch('data/vines.json?v=9');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
