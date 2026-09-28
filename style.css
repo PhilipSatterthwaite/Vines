@@ -158,6 +158,7 @@ svg { display: block; }
   background: var(--surface);
 }
 .answer .tile.filled { background: var(--leaf); border-color: var(--leaf-deep); color: var(--on-leaf); }
+.answer .tile.seeded { background: var(--present); border-color: var(--present-ring); color: var(--on-present); }
 .answer .tile.arrive { animation: arrive .5s cubic-bezier(.3,1.5,.5,1) both; }
 @keyframes arrive { from { transform: scale(.6); background: var(--surface); color: transparent; } }
 .answer .tile.bloom { background: var(--leaf-deep); border-color: var(--leaf-deep); color: var(--on-leaf); animation: bloom .6s cubic-bezier(.3,1.6,.5,1) both; }

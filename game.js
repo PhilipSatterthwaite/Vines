@@ -74,29 +74,35 @@
     return guesses.map(g => matches(g).filter(({ i }) => !grown.has(i) && grown.add(i)));
   }
 
-  function revealed(guesses = game.guesses) {
-    const set = new Set();
-    for (const g of guesses) for (const { i } of matches(g)) { set.add(i); set.add(i + 1); }
-    return set;
+  // Plays the guesses in order and works out what each fills in. Per guess,
+  // vines go first: a pair found in the answer fills its letters there ('vine',
+  // green). Then each other letter that belongs in a blank still empty drops
+  // into the leftmost such blank ('seed', yellow). So every empty blank takes
+  // at most one yellow, and a letter already filled in isn't yellow again.
+  // Returns fill (answer position -> 'vine' | 'seed') and, per guess, its tile
+  // states ('vined' | 'present' | '') and the positions its yellows filled.
+  function progress(guesses = game.guesses, answer = game.answer) {
+    const fill = new Map();
+    const rows = guesses.map(guess => {
+      const live = j => j >= 0 && j < 4 && answer.includes(guess[j] + guess[j + 1]);
+      for (let j = 0; j < 4; j++) {
+        if (!live(j)) continue;
+        const pair = guess[j] + guess[j + 1];
+        for (let i = answer.indexOf(pair); i >= 0; i = answer.indexOf(pair, i + 1)) { fill.set(i, 'vine'); fill.set(i + 1, 'vine'); }
+      }
+      const states = [...guess].map((_, j) => live(j - 1) || live(j) ? 'vined' : '');
+      const seeds = [];
+      states.forEach((state, j) => {
+        if (state) return;
+        const i = [...answer].findIndex((c, k) => c === guess[j] && !fill.has(k));
+        if (i >= 0) { states[j] = 'present'; fill.set(i, 'seed'); seeds.push(i); }
+      });
+      return { states, seeds };
+    });
+    return { fill, rows };
   }
 
   const pairLive = (guess, j) => game.answer.includes(guess[j] + guess[j + 1]);
-  // How each tile of a guess is coloured: 'vined' if it's part of a pair that
-  // grew a vine, 'present' (yellow) if its letter belongs in a blank that's
-  // still unfilled once this guess's vines have grown, or ''. Each unfilled
-  // blank turns at most one tile yellow, left to right, so a letter the answer
-  // has once never shows up yellow twice, and a letter already filled in
-  // doesn't show up yellow at all.
-  function tileStates(guess, answer = game.answer, shown = new Set()) {
-    const live = j => j >= 0 && j < 4 && answer.includes(guess[j] + guess[j + 1]);
-    const states = [...guess].map((_, j) => live(j - 1) || live(j) ? 'vined' : '');
-    const left = {};
-    [...answer].forEach((c, i) => { if (!shown.has(i)) left[c] = (left[c] || 0) + 1; });
-    states.forEach((st, j) => {
-      if (!st && left[guess[j]] > 0) { states[j] = 'present'; left[guess[j]]--; }
-    });
-    return states;
-  }
 
   // ---------- rendering ----------
 
@@ -122,9 +128,9 @@
     $('budget').setAttribute('aria-label', `${MAX_GUESSES - used} guesses left`);
   }
 
-  // arrivals: answer position -> seconds until its vine reaches it.
+  // arrivals: answer position -> seconds until its letter lands there.
   function renderAnswer(arrivals = new Map(), bloomNow = false) {
-    const shown = revealed();
+    const { fill } = progress();
     const box = $('answer');
     box.style.setProperty('--n', game.answer.length);
     box.innerHTML = [...game.answer].map((letter, i) => {
@@ -132,9 +138,10 @@
         const style = bloomNow ? ` style="animation-delay:${(i * 0.08).toFixed(2)}s"` : ' style="animation:none"';
         return `<span class="tile bloom"${style}>${letter}</span>`;
       }
-      if (shown.has(i)) {
+      if (fill.has(i)) {
         const t = arrivals.get(i);
-        return `<span class="tile filled${t !== undefined ? ' arrive' : ''}"${t !== undefined ? ` style="animation-delay:${t.toFixed(2)}s"` : ''}>${letter}</span>`;
+        const kind = fill.get(i) === 'vine' ? 'filled' : 'seeded';
+        return `<span class="tile ${kind}${t !== undefined ? ' arrive' : ''}"${t !== undefined ? ` style="animation-delay:${t.toFixed(2)}s"` : ''}>${letter}</span>`;
       }
       if (game.status === 'lost') return `<span class="tile missed">${letter}</span>`;
       return '<span class="tile"></span>';
@@ -146,12 +153,13 @@
   }
 
   function renderGrid() {
+    const { rows } = progress();
     let html = '';
     for (let r = 0; r < MAX_GUESSES; r++) {
       const guess = game.guesses[r];
       if (guess) {
         let row = '';
-        const states = tileStates(guess, game.answer, revealed(game.guesses.slice(0, r + 1)));
+        const { states } = rows[r];
         for (let j = 0; j < 5; j++) {
           if (j) row += linkHTML(guess, j - 1);
           row += `<span class="tile ${states[j]}">${guess[j]}</span>`;
@@ -283,23 +291,27 @@
     if (game.guesses.includes(word)) return reject('Already guessed');
     if (!FIVE.has(word)) return reject('Not in the word list');
 
-    const before = revealed();
+    const before = progress().fill;
     game.guesses.push(word);
     entry = [];
     const found = matches(word);
+    const { fill, rows } = progress();
+    // Yellow letters drop in first; vines land a moment later (and turn a
+    // yellow letter green if they reach one).
     const arrivals = new Map();
+    rows.at(-1).seeds.forEach((i, n) => arrivals.set(i, 0.25 + 0.12 * n));
     const grown = newVines().at(-1);
     grown.forEach(({ i }, k) => {
       const t = 0.15 * k + 0.75;
-      for (const p of [i, i + 1]) if (!before.has(p) && !arrivals.has(p)) arrivals.set(p, t);
+      for (const p of [i, i + 1]) if (before.get(p) !== 'vine' && !arrivals.has(p)) arrivals.set(p, t);
     });
 
-    if (revealed().size === game.answer.length) game.status = 'won';
+    if (fill.size === game.answer.length) game.status = 'won';
     else if (game.guesses.length >= MAX_GUESSES) game.status = 'lost';
 
-    const newLetters = arrivals.size;
+    const newLetters = [...fill.keys()].filter(i => !before.has(i)).length;
     if (game.status === 'playing') {
-      toast(newLetters ? `${newLetters} letter${newLetters > 1 ? 's' : ''} grew in`
+      toast(newLetters ? `${newLetters} letter${newLetters > 1 ? 's' : ''} filled in`
         : grown.length ? 'New vines, but no new letters'
         : found.length ? 'Those vines were already grown'
         : 'Nothing took root');
@@ -389,8 +401,8 @@
     const score = game.status === 'won' ? game.guesses.length : 'X';
     const title = practice === null ? `Vines #${game.day + 1}` : 'Vines practice';
     const lines = game.guesses.map(w => [0, 1, 2, 3].map(j => pairLive(w, j) ? '🟩' : '🟫').join(''));
-    const shown = revealed();
-    const top = [...game.answer].map((_, i) => shown.has(i) ? '🌸' : '▫️').join('');
+    const { fill } = progress();
+    const top = [...game.answer].map((_, i) => ({ vine: '🟩', seed: '🟨' }[fill.get(i)] ?? '▫️')).join('');
     return `${title} · ${score}/${MAX_GUESSES}\n${top}\n${lines.join('\n')}\n${location.origin}${location.pathname}`;
   }
 
@@ -419,20 +431,22 @@
 
   // ---------- help example ----------
 
+  // One guess against PLANTER: the answer row it produces, then the guess.
   function renderExample() {
     const answer = 'planter';
-    const top = [...answer].map((c, i) => i >= 1 && i <= 4 ? `<span class="tile filled">${c}</span>` : '<span class="tile"></span>').join('');
-    const row = guess => {
-      const states = tileStates(guess, answer);
-      let html = '';
+    const example = guess => {
+      const { fill, rows: [{ states }] } = progress([guess], answer);
+      const top = [...answer].map((c, i) =>
+        fill.has(i) ? `<span class="tile ${fill.get(i) === 'vine' ? 'filled' : 'seeded'}">${c}</span>` : '<span class="tile"></span>').join('');
+      let row = '';
       for (let j = 0; j < 5; j++) {
-        if (j) html += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
-        html += `<span class="tile ${states[j]}">${guess[j]}</span>`;
+        if (j) row += `<span class="link ${answer.includes(guess[j - 1] + guess[j]) ? 'live' : 'dead'}"></span>`;
+        row += `<span class="tile ${states[j]}">${guess[j]}</span>`;
       }
-      return `<div class="row">${html}</div>`;
+      return `<div class="answer">${top}</div><div class="arrow">↑ from</div><div class="row">${row}</div>`;
     };
-    $('example').innerHTML = `<div class="answer">${top}</div><div class="arrow">↑ grown from</div>${row('slant')}`;
-    $('example-2').innerHTML = row('prone');
+    $('example').innerHTML = example('slant');
+    $('example-2').innerHTML = example('prone');
   }
 
   // ---------- keyboard ----------
@@ -496,7 +510,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=10');
+    const res = await fetch('data/vines.json?v=11');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
