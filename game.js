@@ -26,8 +26,8 @@
   }
 
   const reveal = hidden => [...atob(hidden)].reverse().join('');
-  const dailyKey = day => `vines:clue:${day}`;
-  const STATS_KEY = 'vines:clue:stats';
+  const dailyKey = day => `vines:word:${day}`;
+  const STATS_KEY = 'vines:word:stats';
 
   // ---------- game state ----------
 
@@ -35,12 +35,12 @@
     const list = data.puzzles;
     const day = dayIndex();
     const idx = practice ?? ((day % list.length) + list.length) % list.length;
-    const [clue, hidden] = list[idx];
+    const hidden = list[idx];
     const answer = reveal(hidden);
     const saved = practice === null ? store.get(dailyKey(day), null) : null;
     const ok = saved && saved.answer === hidden;
     game = {
-      clue, answer, hidden, day,
+      answer, hidden, day,
       guesses: ok ? saved.guesses : [],
       status: ok ? saved.status : 'playing',
       counted: ok ? !!saved.counted : false,
@@ -106,8 +106,6 @@
 
   function renderAll(arrivals = new Map()) {
     renderStatus();
-    $('clue-text').textContent = game.clue;
-    $('clue-len').textContent = `(${game.answer.length})`;
     renderAnswer(arrivals);
     renderGrid();
     renderKeyboard();
@@ -355,14 +353,13 @@
   function openStats() {
     const s = store.get(STATS_KEY, { played: 0, won: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] });
     const over = game.status !== 'playing';
-    const clue = `<p class="result-clue">${escapeHTML(game.clue)}</p>`;
     let result = '';
     if (game.status === 'won') {
       const n = game.guesses.length;
       const words = ['Perfect bloom', 'Magnificent', 'In full bloom', 'Flourishing', 'Growing nicely', 'Just in time'];
-      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.answer}</div>${clue}<p>Grown in ${n} of ${MAX_GUESSES}</p></div>`;
+      result = `<div class="result"><h2>${words[n - 1]}</h2><div class="answer-word">${game.answer}</div><p>Grown in ${n} of ${MAX_GUESSES}</p></div>`;
     } else if (game.status === 'lost') {
-      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.answer}</div>${clue}</div>`;
+      result = `<div class="result"><h2>Withered</h2><p>The word was</p><div class="answer-word">${game.answer}</div></div>`;
     }
     $('result').innerHTML = result;
     const pct = s.played ? Math.round((100 * s.won) / s.played) : 0;
@@ -378,8 +375,6 @@
     $('stats').showModal();
     if (over) $('share-btn').focus();
   }
-
-  const escapeHTML = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   function tickCountdown() {
     const now = new Date();
@@ -505,14 +500,14 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=14');
+    const res = await fetch('data/vines.json?v=15');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
     load();
     // The rules changed, so show them again even to people who saw the old ones.
-    if (!store.get('vines:seen-clue', false)) {
-      store.set('vines:seen-clue', true);
+    if (!store.get('vines:seen-word', false)) {
+      store.set('vines:seen-word', true);
       $('help').showModal();
     }
   }

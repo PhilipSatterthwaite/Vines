@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vines</title>
-  <meta name="description" content="A crossword clue, five blanks, and six guesses to grow the answer in.">
+  <meta name="description" content="Five blanks and six guesses to grow the answer in, one pair of letters at a time.">
   <meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121812" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 26C10 14 18 8 27 6c-2 9-8 17-20 20z' fill='%233f7d3a'/%3E%3Cpath d='M6 26C12 20 17 15 22 11' stroke='%23f3eee1' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500;1,9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
   <div class="app">
@@ -32,10 +32,6 @@
       <span id="puzzle-label"></span>
       <div class="budget" id="budget" aria-label="Guesses left"></div>
     </div>
-
-    <section class="clue" aria-label="Clue">
-      <p class="clue-text"><span id="clue-text"></span> <span class="clue-len" id="clue-len"></span></p>
-    </section>
 
     <div class="board" id="board">
       <svg class="vines" id="vines" aria-hidden="true"></svg>
@@ -58,7 +54,7 @@
   <dialog class="sheet" id="help">
     <form method="dialog"><button class="close" aria-label="Close">×</button></form>
     <h2>How to play</h2>
-    <p class="lede">You get a crossword clue and five blanks. The answer is a 5-letter word, and you have six guesses.</p>
+    <p class="lede">Grow the hidden 5-letter word into the five blanks. You have six guesses.</p>
     <ol class="rules">
       <li><b>Guess any 5-letter word.</b> Wherever two neighbouring letters in your guess also sit side by side in the answer, in that order, they turn green and a vine grows up to fill them in.
         <div class="example" id="example"></div>
@@ -70,7 +66,7 @@
       </li>
       <li><b>Fill every blank to win.</b> Know the answer? Just guess it: every pair matches, so it fills in all at once.</li>
     </ol>
-    <p class="small">A new puzzle every day. Guesses can be any word Wordle accepts. Clues come from past New York Times crosswords.</p>
+    <p class="small">A new puzzle every day. Guesses can be any word Wordle accepts.</p>
     <form method="dialog"><button class="primary" autofocus>Start growing</button></form>
   </dialog>
 
@@ -87,6 +83,6 @@
     </div>
   </dialog>
 
-  <script src="game.js?v=14"></script>
+  <script src="game.js?v=15"></script>
 </body>
 </html>

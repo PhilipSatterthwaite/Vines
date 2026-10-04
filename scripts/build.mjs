@@ -1,12 +1,10 @@
-// Builds data/vines.json: the guess list and the daily puzzles.
+// Builds data/vines.json: the guess list and the daily answers.
 //
 //   node scripts/build.mjs
 //
 // Guesses are the words NYT Wordle accepts (Tab Atkins' copy of its list,
-// downloaded once into scripts/.cache). Puzzles come from scripts/clues.tsv
-// (made by pick-clues.mjs from targets.txt, Wordle's list of everyday answer
-// words): a 5-letter answer and a hard crossword clue for it. Only clues that
-// scored at least MIN_HARDNESS there are used.
+// downloaded once into scripts/.cache). Answers are scripts/targets.txt,
+// Wordle's list of everyday answer words, shuffled into a daily order.
 
 import fs from 'fs';
 import path from 'path';
@@ -23,11 +21,9 @@ if (!fs.existsSync(listPath)) {
   fs.writeFileSync(listPath, await res.text());
 }
 
-const MIN_HARDNESS = 4;
-const guesses = fs.readFileSync(listPath, 'utf8').split(/\r?\n/).filter(w => /^[a-z]{5}$/.test(w));
-const clues = fs.readFileSync(path.join(here, 'clues.tsv'), 'utf8').split(/\r?\n/).filter(Boolean)
-  .map(line => line.split('\t'))
-  .filter(([, , hardness]) => +hardness >= MIN_HARDNESS);
+const words = file => fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(w => /^[a-z]{5}$/.test(w));
+const guesses = words(listPath);
+const answers = words(path.join(here, 'targets.txt'));
 
 function rng(seed) {
   return () => {
@@ -43,9 +39,9 @@ const shuffle = (arr, rand) => {
   return a;
 };
 
-// The answer is stored reversed and base64'd, so it isn't sitting in plain text.
-const hide = word => Buffer.from([...word.toLowerCase()].reverse().join('')).toString('base64');
-const puzzles = shuffle(clues, rng(20261004)).map(([answer, clue]) => [clue, hide(answer)]);
+// Answers are stored reversed and base64'd, so they aren't sitting in plain text.
+const hide = word => Buffer.from([...word].reverse().join('')).toString('base64');
+const puzzles = shuffle(answers, rng(20261004)).map(hide);
 
 fs.writeFileSync(path.join(root, 'data', 'vines.json'), JSON.stringify({ five: guesses.join(' '), puzzles }));
 console.log('puzzles', puzzles.length, '| guesses', guesses.length);
