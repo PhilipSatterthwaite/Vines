@@ -158,7 +158,6 @@ svg { display: block; }
   background: var(--surface);
 }
 .answer .tile.filled { background: var(--leaf); border-color: var(--leaf-deep); color: var(--on-leaf); }
-.answer .tile.seeded { background: var(--present); border-color: var(--present-ring); color: var(--on-present); }
 .answer .tile.arrive { animation: arrive .5s cubic-bezier(.3,1.5,.5,1) both; }
 @keyframes arrive { from { transform: scale(.6); background: var(--surface); color: transparent; } }
 .answer .tile.bloom { background: var(--leaf-deep); border-color: var(--leaf-deep); color: var(--on-leaf); animation: bloom .6s cubic-bezier(.3,1.6,.5,1) both; }
@@ -275,14 +274,6 @@ svg { display: block; }
 .result .answer-word { font: 700 26px "Fraunces", Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--leaf-deep); }
 .result p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .result .result-clue { font-style: italic; }
-/* Best possible solution, shown after the game */
-.par { margin: 18px 0 0; text-align: center; }
-.par-label { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.par-words { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.par-plus { font-weight: 700; line-height: 1; color: var(--muted); }
-.row.mini .tile { width: 30px; height: 34px; font-size: 17px; border-radius: 7px; }
-.row.mini .link { width: 6px; }
-.result .par { margin-top: 12px; }
 .stats-title { margin: 14px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
 .stat-row b { display: block; font: 700 28px "Fraunces", Georgia, serif; }

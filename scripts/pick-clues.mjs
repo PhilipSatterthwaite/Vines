@@ -1,4 +1,5 @@
-// Picks a hard crossword clue for each answer in targets.txt and writes
+// Picks a hard crossword clue for each answer in targets.txt (Wordle's list of
+// everyday 5-letter answer words) and writes
 // scripts/clues.tsv ("ANSWER<TAB>clue").
 //
 //   node scripts/pick-clues.mjs "path/to/Crossword Generator/docs/pastclues"
