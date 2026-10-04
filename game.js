@@ -500,7 +500,7 @@
   async function start() {
     wire();
     renderExample();
-    const res = await fetch('data/vines.json?v=15');
+    const res = await fetch('data/vines.json?v=16');
     data = await res.json();
     FIVE = new Set(data.five.split(' '));
     await document.fonts?.ready;
